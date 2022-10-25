@@ -781,8 +781,15 @@ C     MeV (NIST)
       DATA cnst/0./,sh1/0./,irfix/0/,jfre/0/ ! Only gosia1 and pawel
 
       INTEGER fstat
-      INTEGER isfirst
+      INTEGER isfirst      
       COMMON /BRIC/ isfirst
+      INTEGER ofiles(99)
+      COMMON /FILES/ ofiles
+
+      DO i = 1,99
+         ofiles(i) = 0
+      ENDDO
+      
 C     Initialize prime numbers
       IP(1) = 2
       IP(2) = 3
@@ -3643,12 +3650,22 @@ C     TJG - close everything
  2001 CLOSE(101)
       CLOSE(106)
       CLOSE(8, STATUS='DELETE')
+      ofiles(8) = 0
       CLOSE(9)
+      ofiles(9) = 0
       CLOSE(12)
+      ofiles(12) = 0
       CLOSE(14, STATUS='DELETE')
+      ofiles(14) = 0
       CLOSE(15, STATUS='DELETE')
+      ofiles(15) = 0
       CLOSE(17, STATUS='DELETE')
+      ofiles(17) = 0
       CLOSE(29, STATUS='DELETE')
+      ofiles(29) = 0
+      DO i=1,99
+         IF ( ofiles(i).EQ.1 ) CLOSE(i)
+      END DO
       RETURN
       END
  
@@ -12785,6 +12802,8 @@ C zero, the function returns. It keeps looping until a unit zero is reached.
       CHARACTER(200) fullpath
       INTEGER*4 IUNIT3 , JZB
       COMMON /SWITCH/ JZB , IUNIT3
+      INTEGER ofiles(99)
+      COMMON /FILES/ ofiles
  100  READ (JZB,*) i , j , k ! unit, old/new/unknown, formatted/unformatted
       IF ( i.EQ.0 ) RETURN
       IF ( j.EQ.1 ) opt1 = 'OLD'
@@ -12811,7 +12830,10 @@ C     Now open the file
 99002 FORMAT (1X,2A)
       WRITE (106,99003) ' IO-num = ' , i , opt1 , opt2
 99003 FORMAT (1X,A,I4,2(1x,A))
-      IF ( k.EQ.0 ) GOTO 100
+      IF ( k.EQ.0 ) THEN
+         ofiles(i) = 1
+         GOTO 100
+      END IF
       WRITE (106,99004) 'PROBLEMS OPENING ' , name , k
 99004 FORMAT (A,A,I6)
       END
