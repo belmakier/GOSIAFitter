@@ -5,7 +5,9 @@
 #include "TFile.h"
 
 #include "GOSIASimMinFCN.h"
+#include "GOSIASimAnMinimizer.h"
 #include "ScalingParameter.h"
+#include "Gosia.h"
 #include <chrono>
 
 //#include "Minuit2/Minuit2Minimizer.h"
@@ -75,7 +77,7 @@ class GOSIASimFitter {
     void UpdateMEs(); /* set the matrix elements in the nucleus objects to reflect those in the parameters */
     void WriteBST();
   void SetWorkingDir(std::string s) { workingDir = s; }
-		void	DoFit(const char* method = "Minuit2", const char* algorithm = "Combined" );	/*!< Perform fitting routine with a user defined method and algorithm (default: Minuit2, Combined) */
+  void	DoFit(const char* method = "Minuit2", const char* algorithm = "Combined", ROOT::Math::MinimizerOptions *opt=NULL );	/*!< Perform fitting routine with a user defined method and algorithm (default: Minuit2, Combined) */
 
 		void	SetBeamGOSIAInput(std::string s)				{ beamGOSIAFile_inp = s;		}
 		void	SetTargetGOSIAInput(std::string s)				{ targetGOSIAFile_inp = s;		}
@@ -95,6 +97,11 @@ class GOSIASimFitter {
 		std::string	GetBeamBST()					const	{ return beamBSTFile;			}
 		std::string	GetTargetBST()					const	{ return targetBSTFile;			}
 
+  std::vector<double> GetBeamMEs();
+  std::vector<double> GetTargetMEs();
+
+  gdet GetDetectors() { return all_detectors; }
+
 		void	SetBeamMapping(std::vector<int> i, std::vector<int> f, std::vector<int> l)
 		{
 			beamMapping_i	= i;
@@ -107,7 +114,14 @@ class GOSIASimFitter {
 			targetMapping_f	= f;
 			targetMapping_l	= l;
 		}
-		
+
+  void SetCorrectionFactors();
+
+  void ReadDetectorFile(std::string dfile);
+  input_file ReadInputFile(std::string inpfile);
+  void ReadBeamInputFile(std::string inpfile, int type);
+  void ReadTargetInputFile(std::string inpfile, int type);
+
 		virtual	void	ClearAll();			/*!< Completely clear all previous input */
 		
 		void	DefineExperiment(double t);					/*!< Defines a new experiment with t = theta_cm */
@@ -118,18 +132,31 @@ class GOSIASimFitter {
     void	AddBeamHalfLife(int,double,double);			/*!< Add literature lifetime data for the beam particle */
 		void	AddBeamBranchingRatio(int,int,int,double,double);	/*!< Add literature branching ratio data for the beam particle*/
 		void	AddBeamMixingRatio(int,int,double,double);		/*!< Add literature mixing ratio data for the beam particle*/
-		void	AddBeamMatrixElement(int,int,int,double,double);		/*!< Add literature matrix element data for the beam particle*/
+  void	AddBeamMatrixElement(int,int,int,double,double,int);		/*!< Add literature matrix element data for the beam particle*/
 		void	AddTargetLifetime(int,double,double);			/*!< Add literature lifetime data for the target particle*/
     void	AddTargetHalfLife(int,double,double);			/*!< Add literature lifetime data for the beam particle */
 		void	AddTargetBranchingRatio(int,int,int,double,double);	/*!< Add literature branching ratio data for the target particle*/
 		void	AddTargetMixingRatio(int,int,double,double);		/*!< Add literature mixing ratio data for the target particle*/
-		void	AddTargetMatrixElement(int,int,int,double,double);		/*!< Add literature matrix element data for the target particle*/
+  void	AddTargetMatrixElement(int,int,int,double,double,int);		/*!< Add literature matrix element data for the target particle*/
 
-		void	AddBeamFittingMatrixElement(int,int,int,double,double,double);		/*!< Add a fitting matrix element for the beam */
-    void  AddBeamRelativeMatrixElement(int,int,int,int,int,int,double,double,double,bool=false,bool=false);		/*!< Add a fitting matrix element for the beam */
-  void SetBeamFittingMatrixElement(int lambda, int init, int fin, double ME, double LL, double UL);
-		void	AddTargetFittingMatrixElement(int,int,int,double,double,double);	/*!< Add a fitting matrix element for the target */
-    void  AddTargetRelativeMatrixElement(int,int,int,int,int,int,double,double,double,bool=false,bool=false);		/*!< Add a fitting matrix element for the beam */
+  void	AddBeamFittingMatrixElement(std::string,int,int,int,double,double,double,bool fx=false);		/*!< Add a fitting matrix element for the beam */
+  void  AddBeamRelativeMatrixElement(std::string,int,int,int,int,int,int,double,double,double,bool=false,bool=false,bool=false);		/*!< Add a fitting matrix element for the beam */
+  void RemoveBeamRelativeMatrixElement(std::string);
+  void SetBeamFittingMatrixElement(std::string,  double ME, double LL, double UL);
+  void	AddTargetFittingMatrixElement(std::string, int,int,int,double,double,double);	/*!< Add a fitting matrix element for the target */
+  void  AddTargetRelativeMatrixElement(std::string,int,int,int,int,int,int,double,double,double,bool=false,bool=false,bool=false);		/*!< Add a fitting matrix element for the beam */
+  void AddBeamLifetimeMixingElement(std::string name, int init, int fin, int l1, int l2, 
+                                                       double wth, double wth_ll, double wth_ul,
+                                         double mix, double mix_ll, double mix_ul,bool fix=false);
+  void AddBeamRelLtMixElement(std::string name, int init, int fin, int l1, int l2, 
+                                            double rel_wth, double rel_wth_ll, double rel_wth_ul,
+                                            double mix, double mix_ll, double mix_ul,
+                                            int init_ref, int final_ref,
+                                              bool fix=false);
+  void AddBeamRelMatWidthElement(std::string name, int l, int init, int fina,
+                                               double relmat, double relmat_ll, double relmat_ul,
+                                               int init_ref, int final_ref,
+                                 bool fx=false);
 		void	CreateScalingParameter(std::vector<int>);				/*!< Add a scaling parameter, with common scaling experiments defined by their indices in a vector of int */
 
 		// Scaling parameters are common to both target and beam
@@ -138,14 +165,12 @@ class GOSIASimFitter {
 		void	AddScalingParameter(ScalingParameter s)				{ scalingParameters.push_back(s);	}	/*!< Append ScalingParameter object to vector */
 		void	ClearScalingParameters()					{ scalingParameters.clear();		}	/*!< Clear scaling parameters */
 
-		void	SetBeamMatrixElements(std::vector<MatrixElement> m)	   	{ matrixElements_Beam = m;		}	/*!< Define vector of fitting MatrixElements for the beam */
-		std::vector<MatrixElement>	GetBeamMatrixElements() 	const	{ return matrixElements_Beam;		}	/*!< Return vector of fitting MatrixElements for the beam */
-		void	ClearBeamMatrixElements()					{ matrixElements_Beam.clear();		}	/*!< Clear vector of fitting MatrixElements for the beam */
-		void	AddBeamMatrixElement(MatrixElement m)				{ matrixElements_Beam.push_back(m);	}	/*!< Add a matrix element for the beam nucleus */
-		void	SetTargetMatrixElements(std::vector<MatrixElement> m)	   	{ matrixElements_Target = m;		}	/*!< Define vector of fitting MatrixElements for the target */
-		std::vector<MatrixElement>	GetTargetMatrixElements() 	const	{ return matrixElements_Target;		}	/*!< Return vector of fitting MatrixElements for the target */
-		void	ClearTargetMatrixElements()					{ matrixElements_Target.clear();	}	/*!< Clear vector of fitting MatrixElements for the target*/
-		void	AddTargetMatrixElement(MatrixElement m)				{ matrixElements_Target.push_back(m);	}	/*!< Add a matrix element for the target nucleus */
+  void SetBeamFittingElements(std::vector<FittingElement*> f) { fittingElements_Beam = f; }
+  std::vector<FittingElement*> GetBeamFittingElements() const { return fittingElements_Beam; }
+  void ClearBeamMatrixElements() { fittingElements_Beam.clear(); } //note this does not free any memory, may be a memory leak
+  void SetTargetFittingElements(std::vector<FittingElement*> f) { fittingElements_Target = f; }
+  std::vector<FittingElement*> GetTargetFittingElements() const { return fittingElements_Target; }
+  void ClearTargetMatrixElements() { fittingElements_Target.clear(); } //note this does not free any memory, may be a memory leak
 
 		void	SetBeamData(std::vector<ExperimentData> d)		   	{ exptData_Beam = d;			}	/*!< Define vector of beam ExperimentData */
 		std::vector<ExperimentData>	GetBeamData() 			const	{ return exptData_Beam;			}	/*!< Return vector of beam ExperimentData */
@@ -193,9 +218,11 @@ class GOSIASimFitter {
 
 		void	AddBeamCorrectionFactor(TMatrixD);										/*!< Add beam point calculation correction factors (append) */
 		void	SetBeamCorrectionFactor(int i, TMatrixD);									/*!< Define beam point calculation correction factors for experiment i */
+  void CalcBeamCorrectionFactors();
 		std::vector<TMatrixD> GetBeamCorrectionFactors()		const	{ return correctionFactors_Beam;	}	/*!< Return beam point calculation correction factors */
 		void	AddTargetCorrectionFactor(TMatrixD);										/*!< Add beam point calculation correction factors (append) */
 		void	SetTargetCorrectionFactor(int i, TMatrixD);									/*!< Define beam point calculation correction factors for experiment i */
+  void CalcTargetCorrectionFactors();
 		std::vector<TMatrixD> GetTargetCorrectionFactors()		const	{ return correctionFactors_Target;	}	/*!< Return beam point calculation correction factors */
 
 		void	Print() const;	/*!< Print fitting details (formatted) */
@@ -211,8 +238,8 @@ class GOSIASimFitter {
 		void	SetNthreads(int n)						{ nThreads = n;				}	/*!< Define number of allowed cores */
 		int	GetNthreads()						const 	{ return nThreads;			}	/*!< Return number of allowed cores */
 	
-		void	SetVerbose(bool b = true)					{ verbose = b;				}	/*!< Define verbocity */
-		bool	GetVerbose()						const	{ return verbose;			}	/*!< Return verbocity */
+		void	SetVerbosity(int b = 1)					{ verbosity = b;				}	/*!< Define verbocity */
+		bool	GetVerbosity()						const	{ return verbosity;			}	/*!< Return verbocity */
 
 		TMatrixD	GetCovarianceMatrix()				const	{ return covMat;			}	/*!< Return covariance matrix from fit 	*/
 		TMatrixD	GetCorrelationMatrix()				const	{ return corMat;			}	/*!< Return correlation matrix from fit 	*/
@@ -228,11 +255,23 @@ class GOSIASimFitter {
 		std::vector<double>	GetFitUL()				const	{ return par_UL;			}	/*!< Return the fit parameter upper limits - Used in MCMC methods */
 		std::vector<double>	GetFitLL()				const	{ return par_LL;			}	/*!< Return the fit parameter lower limits - Used in MCMC methods */
 
-    void FixAllBeamMatrixElements();
-    void UnFixAllBeamMatrixElements();
-    void FixBeamMatrixElements(std::vector<std::vector<int> >);
-    void UnFixBeamMatrixElements(std::vector<std::vector<int> >);
-	
+  void Kick(int seed = 0);
+    void FixAllBeamFittingElements();
+    void UnFixAllBeamFittingElements();
+
+  FittingElement* GetBeamFittingElement(std::string name);
+  FittingElement* GetTargetFittingElement(std::string name);
+  
+  void FixBeamFittingElement(std::string);
+  void UnFixBeamFittingElement(std::string);
+  void FixBeamFittingElements(std::vector<std::string>);
+  void UnFixBeamFittingElements(std::vector<std::string>);
+
+  void FixTargetFittingElement(std::string);
+  void UnFixTargetFittingElement(std::string);
+  void FixTargetFittingElements(std::vector<std::string>);
+  void UnFixTargetFittingElements(std::vector<std::string>);
+
 		void	ClearFitParameters()						
 		{ 
 			parameters.clear();			
@@ -275,10 +314,10 @@ class GOSIASimFitter {
 		std::vector<double>		parameters;			/*!< Matrix elements + scaling factors */
 		std::vector<double>		par_LL;				/*!< Matrix elements + scaling factors - LOWER LIMIT */
 		std::vector<double>		par_UL;				/*!< Matrix elements + scaling factors - UPPER LIMIT */
-		std::vector<MatrixElement>	matrixElements_Beam;		/*!< Preset to related parameters to matrix elements (beam) */
-    std::vector<RelativeMatrixElement>	relativeElements_Beam;		/*!< Preset to related parameters to matrix elements (beam) */
-		std::vector<MatrixElement>	matrixElements_Target;		/*!< Preset to related parameters to matrix elements (target) */
-    std::vector<RelativeMatrixElement>	relativeElements_Target;		/*!< Preset to related parameters to matrix elements (target) */
+
+  std::vector<FittingElement*> fittingElements_Beam;
+  std::vector<FittingElement*> fittingElements_Target;
+  
 		std::vector<ScalingParameter>	scalingParameters;		/*!< Common scaling parameters */
 
 		std::vector<TMatrixD>		correctionFactors_Beam;		/*!< Point corrections for the beam nucleus excitation */
@@ -316,7 +355,7 @@ class GOSIASimFitter {
 		int				nThreads;
 
 		bool				first;
-		bool				verbose;
+  int				verbosity; // 0 = silent, 1 = quiet, 2 = verbose
 
 		TMatrixD			covMat;
 		TMatrixD			corMat;
@@ -344,5 +383,18 @@ class GOSIASimFitter {
 
 		std::vector<float>		expt_weights;
 
+  gdet all_detectors;
+
+  input_file beam_inputfile;
+  input_file target_inputfile;
+
+  input_file beam_int_inputfile; //integral calculation
+  input_file target_int_inputfile; //integral calculation
+
+  out_yields beam_yields;
+  out_yields target_yields;
+
 };
+
 #endif
+

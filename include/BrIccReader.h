@@ -5,6 +5,7 @@
 
 class BrIccReader {
   //these are structures for reading the BrIcc database format
+public:
   struct eshell {
   public:
     bool exist;
@@ -58,6 +59,7 @@ class BrIccReader {
   void Close();
 
   double GetTotalCC(int Z, double egamma, int mult); //note that this mult is defined differently from GOSIAReader mult
+  double GetTotalOmg(int Z, double egamma); //Gets Omega for E0 transitions
 
 private:
   FILE *idxfile;

@@ -1,9 +1,23 @@
 #include "Gosia.h"
 
-void RunGosia(std::string filename, std::string dir, std::string outfile) {
-  int fnlen = (int)filename.size();
+void RunGosia(input_file &inputfile,
+              std::string dir,
+              gdet &all_dets,
+              std::vector<double> &matels,
+              out_yields &output,
+              int verbosity) {
   int dirlen =  (int)dir.size();
-  int oflen = (int)outfile.size();
   //system(("cd "+dir+"; ./gosia < "+filename+" > "+outfile).c_str());
-  gosia_(filename.c_str(), fnlen, dir.c_str(), dirlen, outfile.c_str(), oflen);
+
+  double bst_me[999];
+  for (int i=0; i<matels.size(); ++i) {
+    bst_me[i] = matels[i];
+  }
+
+  gosia_(&inputfile, 
+         dir.c_str(), dirlen,
+         &all_dets,
+         &bst_me[0],
+         &output,
+         verbosity);
 }

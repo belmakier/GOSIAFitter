@@ -3,6 +3,7 @@
 
 #include "ScalingParameter.h"
 #include "Nucleus.h"
+#include "Gosia.h"
 //#include "Minuit2/FCNBase.h"
 #include "Literature.h"
 #include "ExperimentalInput.h"
@@ -10,6 +11,7 @@
 #include "TransitionRates.h"
 #include "GOSIAReader.h"
 #include "ScalingFitFCN.h"
+#include "GOSIASimAnMinimizer.h"
 
 //#include "Minuit2/Minuit2Minimizer.h"
 #include "Math/Functor.h"
@@ -58,7 +60,7 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 											{ 
 												exptData_Beam	= d_beam;
 												exptData_Target	= d_target;													
-												verbose = false;  
+												verbosity = 1;  
 												iter = 0;	
 												nThreads = 1;
 												fLikelihood 	= false;
@@ -72,6 +74,7 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 
 												expt_weights.resize(Nexpts);
 												std::fill(expt_weights.begin(),expt_weights.end(),1);
+                        simanmin = NULL;
 
 											}	/*!< Construct object with vector of experimental data to be fit */
 		virtual ~GOSIASimMinFCN()						{;					}
@@ -113,6 +116,11 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 			targetMapping_l	= l;
 		}
 
+  void SetDetectors(gdet dets) { all_detectors = dets; }
+
+  void SetInputFiles(input_file beam, input_file target) { beam_inputfile = beam; target_inputfile = target; }
+  void SetIntInputFiles(input_file beam, input_file target) { beam_int_inputfile = beam; target_int_inputfile = target; }    
+
 		std::vector<int>	GetBeamMapping_I()			const	{ return beamMapping_i;			}
 		std::vector<int>	GetBeamMapping_F()			const	{ return beamMapping_f;			}
 		std::vector<int>	GetBeamMapping_L()			const	{ return beamMapping_l;			}
@@ -125,20 +133,27 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 		void	SetScalingParameters(std::vector<ScalingParameter> s)		{ scalingParameters = s;		}	/*!< Define the vector of ScalingParameter objects for fitting */
 		void	AddScalingParameter(ScalingParameter s)				{ scalingParameters.push_back(s);	}	/*!< Append a new ScalingParameter to the vector */
 		void	ClearScalingParameters()					{ scalingParameters.clear();		}	/*!< Clear the vector of ScalingParameter objects */
+  void	AddBeamCorrectionFactor(TMatrixD);										/*!< Add beam point calculation correction factors (append) */
 
 		double 	up() const	 						{ return theErrorDef;			}	/*!< Required by ROOT::Minimizer */
 		double 	operator()(const double*);											/*!< Required by ROOT::Minimizer */
 		void	SetErrorDef(double def)						{ theErrorDef = def;			}	/*!< Required by ROOT::Minimizer */
 
 		// The below are duplicated for beam and target excitation:
-		void	SetBeamMatrixElements(std::vector<MatrixElement> m)		{ ME_Beam = m;				}	/*!< Define the vector of beam MatrixElement objects to be fitted */
-		std::vector<MatrixElement>	GetBeamMatrixElements() 	const	{ return ME_Beam;			}	/*!< Return the vector of beam MatrixElement objects to be fitted */
-  void	SetBeamRelativeElements(std::vector<RelativeMatrixElement> m)		{ ME_BeamRel = m;				}	/*!< Define the vector of beam RelativeMatrixElement objects to be varied */  
-  std::vector<RelativeMatrixElement>	GetBeamRelativeElements() const {	return ME_BeamRel; }	/*!< Define the vector of beam RelativeMatrixElement objects to be varied */
-		void	SetTargetMatrixElements(std::vector<MatrixElement> m)		{ ME_Target = m;			}	/*!< Define the vector of target MatrixElement objects to be fitted */
-		std::vector<MatrixElement>	GetTargetMatrixElements() 	const	{ return ME_Target;			}	/*!< Return the vector of target MatrixElement objects to be fitted */
-  void	SetTargetRelativeElements(std::vector<RelativeMatrixElement> m)		{ ME_TargetRel = m;				}	/*!< Define the vector of beam RelativeMatrixElement objects to be varied */  
-  std::vector<RelativeMatrixElement>	GetTargetRelativeElements() const {	return ME_TargetRel; }	/*!< Define the vector of beam RelativeMatrixElement objects to be varied */
+  /*
+  void	SetBeamMatrixElements(std::vector<MatrixElement> m)		{ ME_Beam = m;				}	//!< Define the vector of beam MatrixElement objects to be fitted //
+  std::vector<MatrixElement>	GetBeamMatrixElements() 	const	{ return ME_Beam;			}	//!< Return the vector of beam MatrixElement objects to be fitted //
+  void	SetBeamRelativeElements(std::vector<RelativeMatrixElement> m)		{ ME_BeamRel = m;				}	//!< Define the vector of beam RelativeMatrixElement objects to be varied //
+  std::vector<RelativeMatrixElement>	GetBeamRelativeElements() const {	return ME_BeamRel; }	//!< Define the vector of beam RelativeMatrixElement objects to be varied //
+  void	SetTargetMatrixElements(std::vector<MatrixElement> m)		{ ME_Target = m;			}	//!< Define the vector of target MatrixElement objects to be fitted //
+  std::vector<MatrixElement>	GetTargetMatrixElements() 	const	{ return ME_Target;			}	//!< Return the vector of target MatrixElement objects to be fitted //
+  void	SetTargetRelativeElements(std::vector<RelativeMatrixElement> m)		{ ME_TargetRel = m;				}	//!< Define the vector of beam RelativeMatrixElement objects to be varied //
+  std::vector<RelativeMatrixElement>	GetTargetRelativeElements() const {	return ME_TargetRel; }	//!< Define the vector of beam RelativeMatrixElement objects to be varied //
+  */
+  void SetBeamFittingElements(std::vector<FittingElement*> f) { FE_Beam = f; }
+  std::vector<FittingElement*> GetBeamFittingElements() const { return FE_Beam; }
+  void SetTargetFittingElements(std::vector<FittingElement*> f) { FE_Target = f; }
+  std::vector<FittingElement*> GetTargetFittingElements() const { return FE_Target; }
 
 		void	SetBeamData(std::vector<ExperimentData> d)			{ exptData_Beam = d;			}	/*!< Define the vector of beam ExperimentData objects (one for each experiment) */
 		std::vector<ExperimentData>	GetBeamData() 			const	{ return exptData_Beam;			}	/*!< Return the vector of beam ExperimentData objects (one for each experiment) */
@@ -182,13 +197,15 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 		std::vector<TMatrixD> GetBeamCorrectionFactors()		const	{ return correctionFactors_Beam;	}	/*!< Return the vector of correciton factors between point and integrated cross sections for the beam */
 		void	SetTargetCorrectionFactors(std::vector<TMatrixD> v)		{ correctionFactors_Target = v;		}	/*!< Define the vector of correction factors between point and integrated cross sections for the target */
 		std::vector<TMatrixD> GetTargetCorrectionFactors()		const	{ return correctionFactors_Target;	}	/*!< Return the vector of correciton factors between point and integrated cross sections for the target */
+  void CalcBeamCorrectionFactors();
+  void CalcTargetCorrectionFactors();
 
 		// The following is unchanged from CoulExMinFCN:
 		void	SetNpar(int n)							{ nPar = n;				}	/*!< Define the number of fitting parameters (fitting matrix elements + scaling parameters) */
 		int	GetNpar()						const	{ return nPar;				}	/*!< Return the number of fitting parameters (fitting matrix elements + scaling parameters) */
 
-		void	SetVerbose(bool b = true)					{ verbose = b;				}	/*!< Define the verbocity of the minimization */	
-		bool	GetVerbose() 						const	{ return verbose;			}	/*!< Return the verbocity of the minimization */
+		void	SetVerbosity(int b = 1)					{ verbosity = b;				}	/*!< Define the verbocity of the minimization */	
+		bool	GetVerbosity() 						const	{ return verbosity;			}	/*!< Return the verbocity of the minimization */
 
 		void	SetIter(int i)							{ nIterations = i;			}	/*!< Define the number of iterations (MINUIT2) */
 		void 	SetCalls(int i)							{ nCalls = i;				}	/*!< Define the number of function calls (GSL) */
@@ -205,16 +222,28 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 		bool	LikelihoodFit()						const	{ return fLikelihood;			}	/*!< Return whether we do a log-likelihood based fit (default: chi-squared) */
 
 		void	SetWeights(std::vector<float> v)				{ expt_weights = v;			}	
-		std::vector<float>	GetWeights()				const	{ return expt_weights;			}	
+		std::vector<float>	GetWeights()				const	{ return expt_weights;			}
+
+  void Gosia(int species, int verbosity); //run Gosia calculation
+  out_yields GetBeamYields() {   return beam_yields; }
+  out_yields GetTargetYields() { return target_yields; }
+
+  void SetSimAn(GOSIASimAnMinimizer *sam) { simanmin = sam; }
+  
 
 	private :
 
   std::string workingDir;
 		std::vector<double>		parameters;			/*!< Matrix elements for both beam and target, and common scaling factors */
-		std::vector<MatrixElement>	ME_Beam;			/*!< Beam matrix elements - Preset to relate parameters to beam matrix elements */
-  std::vector<RelativeMatrixElement>	ME_BeamRel;			/*!< Beam matrix elements - Preset to relate parameters to beam matrix elements */
-		std::vector<MatrixElement>	ME_Target;			/*!< Target matrix elements - Preset to relate parameters to target matrix elements */
-  std::vector<RelativeMatrixElement>	ME_TargetRel;			/*!< Beam matrix elements - Preset to relate parameters to beam matrix elements */
+  /*
+  std::vector<MatrixElement>	ME_Beam;			//!< Beam matrix elements - Preset to relate parameters to beam matrix elements 
+  std::vector<RelativeMatrixElement>	ME_BeamRel;			//!< Beam matrix elements - Preset to relate parameters to beam matrix elements 
+  std::vector<MatrixElement>	ME_Target;			//!< Target matrix elements - Preset to relate parameters to target matrix elements 
+  std::vector<RelativeMatrixElement>	ME_TargetRel;			//!< Beam matrix elements - Preset to relate parameters to beam matrix elements 
+  */
+  std::vector<FittingElement*> FE_Beam;
+  std::vector<FittingElement*> FE_Target;
+  
 		std::vector<ScalingParameter>	scalingParameters;		/*!< Scaling parameters - common to both target and beam excitations */
 
 		std::vector<TMatrixD>		correctionFactors_Beam;		/*!< Point correction factor for the beam (accounts for the angular distribution of the cross section) */
@@ -249,7 +278,7 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 
 		TransitionRates			fRates;
 
-		bool				verbose;
+		int				verbosity;
 
 		int				nCalls;
 		int				nIterations;
@@ -280,6 +309,19 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 
 		std::vector<float>		expt_weights;
 
+    gdet all_detectors;
+  input_file beam_inputfile;
+  input_file target_inputfile;
+
+  input_file beam_int_inputfile;
+  input_file target_int_inputfile;
+
+  out_yields beam_yields;
+  out_yields target_yields;
+  double bst_me[999];
+
+  GOSIASimAnMinimizer *simanmin;
+  
 };
 
 #endif

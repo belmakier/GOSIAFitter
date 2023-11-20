@@ -71,6 +71,7 @@ LitMatrixElement::LitMatrixElement(const LitMatrixElement& lm){
 	MatrixElement	= lm.MatrixElement;
 	DnUncertainty	= lm.DnUncertainty;
 	UpUncertainty	= lm.UpUncertainty;
+  Sign = lm.Sign;
 
 }
 LitMatrixElement& LitMatrixElement::operator = (const LitMatrixElement& lm){
@@ -81,6 +82,7 @@ LitMatrixElement& LitMatrixElement::operator = (const LitMatrixElement& lm){
 	MatrixElement	= lm.MatrixElement;
 	DnUncertainty	= lm.DnUncertainty;
 	UpUncertainty	= lm.UpUncertainty;
+  Sign = lm.Sign;
 
 	return *this;
 

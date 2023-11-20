@@ -325,6 +325,9 @@ void MiscFunctions::Spline(double *x, double *y, int n, double xval, double &yva
   SplineEval(x, y_loc, ddy, n, xval, yval);
 
   yval = std::exp(yval);
+
+  delete[] y_loc;
+  delete[] ddy;
   return;
 }
 

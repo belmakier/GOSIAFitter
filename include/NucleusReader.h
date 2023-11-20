@@ -28,7 +28,7 @@ public:
   NucleusReader(const char*, bool GOSIA=false);		/*!< Construct with a filename */
   NucleusReader(const NucleusReader &n);	/*!< Copy constructor */
   NucleusReader& operator = (const NucleusReader &n); /*!< Assignment operator */
-  ~NucleusReader() {;}
+  ~NucleusReader() { delete fNucleus;}
 
   void		ReadNucleusFile(const char*);	/*!< Read formatted input file and create Nucleus */
   Nucleus*	GetNucleus()	{ return fNucleus; }	/*!< Return Nucleus created from input file */
@@ -37,6 +37,7 @@ public:
   void  WriteNucleusFile(const char *);
   void  WriteGOSIANucleus(const char *);
   void  WriteBST(const char *);
+  void SetMapping();
 
   std::vector<int>	GetBSTInit()	const	{ return bst_i;	}
   std::vector<int>	GetBSTFinal()	const 	{ return bst_f;	}

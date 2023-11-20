@@ -45,6 +45,11 @@ Nucleus::Nucleus(const Nucleus& n) : MatrixElements(n.MatrixElements.size()), Ma
 		ConversionCoefficients.at(i) = n.ConversionCoefficients.at(i);
 	}
 
+  OmegaCoefficients.ResizeTo(n.OmegaCoefficients.GetNcols(),n.OmegaCoefficients.GetNrows());
+  OmegaCoefficients = n.OmegaCoefficients;
+
+  RhoSquared.ResizeTo(n.RhoSquared.GetNcols(),n.RhoSquared.GetNrows());
+  RhoSquared = n.RhoSquared;
 
 }
 Nucleus& Nucleus::operator = (const Nucleus& n){
@@ -83,6 +88,12 @@ Nucleus& Nucleus::operator = (const Nucleus& n){
 		ConversionCoefficients.at(i).ResizeTo(n.ConversionCoefficients.at(i).GetNrows(),n.ConversionCoefficients.at(i).GetNcols());
 		ConversionCoefficients.at(i) = n.ConversionCoefficients.at(i);
 	}
+
+  OmegaCoefficients.ResizeTo(n.OmegaCoefficients.GetNrows(),n.OmegaCoefficients.GetNcols());
+  OmegaCoefficients = n.OmegaCoefficients;
+
+  RhoSquared.ResizeTo(n.RhoSquared.GetNrows(),n.RhoSquared.GetNcols());
+  RhoSquared = n.RhoSquared;
   
 	return *this;
 
@@ -110,6 +121,9 @@ void Nucleus::SetNstates(int nS){
 		MatrixElementsLL[i].ResizeTo(nS,nS);
     ConversionCoefficients[i].ResizeTo(nS,nS);
 	}
+
+  OmegaCoefficients.ResizeTo(nS,nS);
+  RhoSquared.ResizeTo(nS,nS);
 	
 }
 
@@ -236,9 +250,11 @@ void Nucleus::PrintState(int s) const{
 	std::cout << GetLevelEnergies().at(s) << "\t" << GetLevelJ().at(s) << "\t" << GetLevelP().at(s) << std::endl;
 }	
 
-void Nucleus::SetConversionCoefficients(std::string bricc_idx, std::string bricc_icc) {
-  BrIccReader bricc(bricc_idx, bricc_icc);
+void Nucleus::SetBrIcc(std::string bricc_idx, std::string bricc_icc) {
+  bricc.Open(bricc_idx, bricc_icc);
+}
 
+void Nucleus::SetConversionCoefficients() {
   int bricc_lambda[8] = {0,1,2,3,4,-1,5,6};  //BRICC does not have E6 conversion, so M1 and M2 are indices 5 and 6
 
   for (int l = 0; l<maxLambda; ++l) {
@@ -271,4 +287,25 @@ void Nucleus::SetConversionCoefficients(std::string bricc_idx, std::string bricc
       }
     }
   }  
+}
+
+void Nucleus::SetOmegaCoefficients() {
+  for (int i=0; i<nStates; ++i) {
+    for (int j=i; j<nStates; ++j) {
+      OmegaCoefficients[i][j] = 0.0;
+      if (i==j) { continue; }
+      if (LevelJ.at(i) != LevelJ.at(j)) { continue; }
+      if (LevelP.at(i) != LevelP.at(j)) { continue; }
+
+      double Egamma = std::abs(LevelEnergies.at(i) - LevelEnergies.at(j));
+      double Omega = bricc.GetTotalOmg(nucleusZ, Egamma*1000.0);
+      OmegaCoefficients[i][j] = Omega;
+      OmegaCoefficients[j][i] = Omega;
+    }
+  }
+}
+
+void Nucleus::AddRhoSquared(int i, int j, double rho_squared) {
+  RhoSquared[i][j] = rho_squared/1000.0;
+  RhoSquared[j][i] = rho_squared/1000.0;
 }

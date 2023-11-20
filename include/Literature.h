@@ -1,6 +1,8 @@
 #ifndef Literature_h
 #define Literature_h
 
+#include <iostream>
+
 ///
 ///	\class LitLifetime
 ///
@@ -155,7 +157,8 @@ class LitMatrixElement{
 		///	Matrix element = me \n
 		///	Uncertainty = e 
 		///
-		LitMatrixElement(int mult, int i, int f, double me, double e)			{ Multipolarity = mult; StateIndex_I = i; StateIndex_F = f; MatrixElement = me; UpUncertainty =	e; DnUncertainty =  e;	}
+  LitMatrixElement(int mult, int i, int f, double me, double e, int s)			{ Multipolarity = mult; StateIndex_I = i; StateIndex_F = f; MatrixElement = me; UpUncertainty =	e; DnUncertainty =  e; Sign = s;
+  }
 		///
 		///	Construct literature mixing ratio with symmetric uncertainties:\n
 		///	Multipolarity = mult \n
@@ -165,7 +168,7 @@ class LitMatrixElement{
 		///	Positive uncertainty = ue 
 		///	Negative uncertainty = de
 		///
-		LitMatrixElement(int mult, int i, int f, double me, double ue, double de)	{ Multipolarity = mult; StateIndex_I = i; StateIndex_F = f; MatrixElement = me; UpUncertainty = ue; DnUncertainty = de;	}
+  LitMatrixElement(int mult, int i, int f, double me, double ue, double de, int s)	{ Multipolarity = mult; StateIndex_I = i; StateIndex_F = f; MatrixElement = me; UpUncertainty = ue; DnUncertainty = de;	Sign = s;}
 		~LitMatrixElement()	{;}
 		LitMatrixElement(const LitMatrixElement& lm);			 	/*!< Copy constructor */
 		LitMatrixElement& operator = (const LitMatrixElement& lm);          	/*!< Assignment operator */
@@ -176,6 +179,7 @@ class LitMatrixElement{
 		double		GetMatrixElement()	const		{ return MatrixElement;		}	/*!< Return mixing ratio */
 		double		GetDnUnc()		const		{ return DnUncertainty;		}	/*!< Return negative uncertainty */
 		double		GetUpUnc()		const		{ return UpUncertainty;		}	/*!< Return positive uncertainty */
+  int GetSign() const { return Sign; }
 
 	private:
 		double		Multipolarity;	/*!< Matrix element multipolarity */
@@ -184,6 +188,7 @@ class LitMatrixElement{
 		double		MatrixElement;	/*!< Literature matrix element */
 		double  	DnUncertainty;	/*!< Negative uncertainty */
 		double		UpUncertainty;	/*!< Positive uncertainty */
+  int Sign; /* Sign: +,-, or 0 for undefined */
 };
 #endif
 

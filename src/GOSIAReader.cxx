@@ -1,9 +1,16 @@
+#include "Gosia.h"
 #include "GOSIAReader.h"
 
 GOSIAReader::GOSIAReader(Nucleus* nucl, const char *datafilename){
 	gosiaData.clear();
 	fNucleus = *nucl;
 	ReadGOSIAFile(datafilename);
+}
+
+GOSIAReader::GOSIAReader(Nucleus* nucl, out_yields &gosia_yields){
+	gosiaData.clear();
+	fNucleus = *nucl;
+	ReadGOSIAFile(gosia_yields);
 }
 
 void	GOSIAReader::ReadGOSIAFile(const char* datafilename){
@@ -83,6 +90,35 @@ void	GOSIAReader::ReadGOSIAFile(const char* datafilename){
       angle_av.push_back((angle_lo+angle_hi)/2.0);
 		}
 	}	
+}
+
+void	GOSIAReader::ReadGOSIAFile(out_yields &gosia_yields){
+  //std::cout << "Reading GOSIA output" << std::endl;
+  for (int i=0; i<gosia_yields.nexp; ++i) {
+    //std::cout << "Exp: " << i << std::endl;
+    int nyields = gosia_yields.experiment[i].nyields;
+    ExperimentData tmpExpt;
+    for (int j=0; j<nyields; ++j) {
+      int ni = gosia_yields.experiment[i].ni[j];
+      int nf = gosia_yields.experiment[i].nf[j];
+      double yld = gosia_yields.experiment[i].yield[j];
+      ni--;	// GOSIA to Cygnus numbering
+      nf--;		// GOSIA to Cygnus numbering
+      //std::cout << i << "   " << j << "   " << ni << "   " << nf << "   " << yld << std::endl;
+      if(ni < fNucleus.GetNstates() && nf < fNucleus.GetNstates() && ni >= 0 && nf >= 0){
+        tmpExpt.AddData(ni,nf,yld,0);        
+      }
+    }
+    gosiaData.push_back(tmpExpt);
+
+    energy_low.push_back(gosia_yields.experiment[i].en_low);
+    energy_high.push_back(gosia_yields.experiment[i].en_high);
+    angle_low.push_back(gosia_yields.experiment[i].theta_low);
+    angle_high.push_back(gosia_yields.experiment[i].theta_high);
+    angle_av.push_back((gosia_yields.experiment[i].theta_high+
+                        gosia_yields.experiment[i].theta_low)/2.);
+    rutherfords.push_back(gosia_yields.experiment[i].ruth);      
+  }
 }
 
 void	GOSIAReader::Print() const{

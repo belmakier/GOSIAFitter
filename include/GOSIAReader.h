@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 
+#include "Gosia.h"
 #include "Nucleus.h"
 #include "ExperimentalInput.h"
 
@@ -14,17 +15,20 @@ class GOSIAReader {
 
 	public:
 
-		GOSIAReader(Nucleus*,const char*);	
-		~GOSIAReader()				{;}
+		GOSIAReader(Nucleus*,const char*);
+  GOSIAReader(Nucleus*,out_yields &gosia_yields);	
+		~GOSIAReader()				{ ;}
 
 		void	Clear()				{ gosiaData.clear();		}
 		void	ReadGOSIAFile(const char*);			/*!< Read formatted GOSIA file and extract yields */
+  void ReadGOSIAFile(out_yields &gosia_yields);
 
 		std::vector<ExperimentData>		GetGOSIAData()		{ return gosiaData;	}	/*!< Return vector of ExperimentData containing GOSIA yields*/
 
 		void	Print()	const;
   std::vector<double> GetAverageAngles() { return angle_av; }
   double GetSolidAngleWidth(int i) { return std::abs((std::cos(angle_high[i]*3.14159265/180.0) - std::cos(angle_low[i]*3.14159265/180.0))); }
+  double GetAngleWidth(int i) { return angle_high[i]*3.14159265/180.0 - angle_low[i]*3.14159265/180.0; }
   std::vector<double> GetRutherfords() { return rutherfords; }
 
 	private:

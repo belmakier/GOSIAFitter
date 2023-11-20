@@ -78,9 +78,14 @@ void NucleusReader::ReadNucleusFile(const char *filename){
 				else{
 					ss >> tmpI1 >> tmpI2 >> tmp_ME >> tmp_Lambda;	
 				}
-				fNucleus->SetMatrixElement(tmp_Lambda-1,tmpI1,tmpI2,tmp_ME);
-        present.at(tmp_Lambda-1)[tmpI1][tmpI2] = 1.0;
-        present.at(tmp_Lambda-1)[tmpI2][tmpI1] = 1.0;
+        if (tmp_Lambda > 0) {
+          fNucleus->SetMatrixElement(tmp_Lambda-1,tmpI1,tmpI2,tmp_ME);
+          present.at(tmp_Lambda-1)[tmpI1][tmpI2] = 1.0;
+          present.at(tmp_Lambda-1)[tmpI2][tmpI1] = 1.0;
+        }
+        else {
+          fNucleus->AddRhoSquared(tmpI1,tmpI2,tmp_ME*tmp_ME*1000.0);
+        }
 			}
 
 			counter++;
@@ -313,6 +318,38 @@ void NucleusReader::WriteBST(const char *bstfilename) {
             char str[80];
             sprintf(str, "%7.6f\n", mes[i][j]);
             bstfile << str;
+            bst_i.push_back(i);
+            bst_f.push_back(j);
+            bst_l.push_back(l);
+          }
+        }
+      }
+    }
+  }
+}
+
+void NucleusReader::SetMapping() {
+  bst_i.clear();
+  bst_f.clear();
+  bst_l.clear();
+  for (int l=0; l<fNucleus->GetMaxLambda(); ++l) {
+    TMatrixD mes = fNucleus->GetMatrixElements().at(l);
+    for (int i=0; i<fNucleus->GetNstates(); ++i) {
+      for (int j=i; j<fNucleus->GetNstates(); ++j) {
+        if (present.at(l)[i][j] == 0.0) { continue; }
+        //check parity
+        int lambda = l+1;
+        int abs_lambda = l+1;
+        if(l >= 6) {// Magnetic - opposite parity conventions to electric
+          lambda -= 5;
+          abs_lambda -= 6;
+        }
+        int	dP_Lambda = TMath::Power(-1,lambda);
+        int	dP = fNucleus->GetLevelP().at(i)/fNucleus->GetLevelP().at(j);
+        if (dP == dP_Lambda) {
+          //triangle inequality
+          if (std::abs(fNucleus->GetLevelJ().at(i) - fNucleus->GetLevelJ().at(j)) <= abs_lambda &&
+              abs_lambda <= std::abs(fNucleus->GetLevelJ().at(i) + fNucleus->GetLevelJ().at(j))) {
             bst_i.push_back(i);
             bst_f.push_back(j);
             bst_l.push_back(l);

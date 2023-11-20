@@ -7,6 +7,8 @@
 #include <iomanip>
 #include <vector>
 
+#include "BrIccReader.h"
+
 ///
 ///	\class Nucleus
 ///
@@ -38,7 +40,10 @@ class Nucleus
 		void SetStateJ(int s, double J);			/*!< Define spin J of state with index s */
 		void SetStateP(int s, int P);				/*!< Define parity P of state with index s */
 		void SetMatrixElement(int l, int s1, int s2, double me);	/*!< Define matrix element me, of multipolarity l, between states s1 and s2 */
-    void SetConversionCoefficients(std::string bricc_idx, std::string bricc_icc);
+  void SetBrIcc(std::string bricc_idx, std::string bricc_icc);
+    void SetConversionCoefficients();
+  void SetOmegaCoefficients();
+  void AddRhoSquared(int i, int j, double rho_squared); //rho_squared in milli-units
 
 		void SetZ(int z)	{ nucleusZ = z;	}	/*!< Define nucleus proton number, Z */
 		void SetA(int a)	{ nucleusA = a;	}	/*!< Define nucleus mass number, A */
@@ -56,6 +61,8 @@ class Nucleus
 		std::vector<int>	GetLevelP()		const	{ return LevelP;		}	/*!< Return vector of level parities */
 		std::vector<TMatrixD>	GetMatrixElements()	const	{ return MatrixElements;	}	/*!< Return vector of transition matrices (one per multipolarity) */
     std::vector<TMatrixD> GetConversionCoeffients() const { return ConversionCoefficients; }
+    TMatrixD GetOmegaCoefficients() const { return OmegaCoefficients; }
+  TMatrixD GetRhoSquared() const { return RhoSquared; }
 	
 		void			PrintNucleus()	const;		/*!< Print Nucleus information */
 		void			PrintState(int) const;		/*!< Print State information */
@@ -68,6 +75,8 @@ class Nucleus
 		int			nucleusZ;			/*!< Proton number of the nucleus */
 		int			nucleusA;			/*!< Nucleon number of the nucleus */
 
+  BrIccReader bricc;
+
 		std::vector<double>	LevelEnergies;			/*!< Vector containing the level energies of the states */
 		std::vector<double>	LevelJ;				/*!< Vector containing the spins of the states */
 		std::vector<int>	LevelP;				/*!< Vector containing the parities of the states */
@@ -77,6 +86,9 @@ class Nucleus
 		std::vector<TMatrixD>	MatrixElementsLL;		/*!< Vector (length nLambda) containg the matrix of matrix element lower limits, dimensions nStates x nStates */
 
     std::vector<TMatrixD> ConversionCoefficients;			/*!< Vector (length nLambda) containg the matrix of conversion coefficients, dimensions nStates x nStates */
+  
+  TMatrixD OmegaCoefficients;			/* for E0 transitions */
+    TMatrixD RhoSquared;			/* for E0 transitions, in regular units (not milliunits) */
 
 };
 #endif
