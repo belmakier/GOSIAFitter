@@ -527,9 +527,18 @@ C      ZV     - energy meshpoints
       type, bind(C) :: input_file
 
       integer(c_int) :: nlines;
-      character(c_char), dimension(256,1000) :: lines
+      character(c_char), dimension(512,1000) :: lines
       
       end type input_file
+
+C      type, bind(C) :: out_det
+C      integer(c_int) :: number;
+C      integer(c_int) :: nyields;
+C      integer(c_int), dimension(256) :: ni;
+C      integer(c_int), dimension(256) :: nf;
+C      real(c_double), dimension(256) :: yield;
+C
+C      end type out_det
       
       type, bind(C) :: out_exp
       real(c_double) :: ruth
@@ -540,9 +549,12 @@ C      ZV     - energy meshpoints
       integer(c_int) :: number
 
       integer(c_int) :: nyields
-      integer(c_int), dimension(999) :: ni
-      integer(c_int), dimension(999) :: nf
-      real(c_double), dimension (999) :: yield
+      integer(c_int), dimension(256) :: ni
+      integer(c_int), dimension(256) :: nf
+      real(c_double), dimension (256) :: yield
+
+      integer(c_int) :: ndets;
+C      type(out_det), dimension(32) :: dets;      
       
       end type out_exp
       
@@ -862,7 +874,7 @@ C      ZV     - energy meshpoints
       INTEGER*4 NLIFT
       COMMON /LIFE  / NLIFT
       INTEGER*4 IUNIT3 , JZB, lct, nlines
-      character(len=256), dimension(1000) :: input
+      character(len=512), dimension(1000) :: input
       COMMON /SWITCH/ JZB , IUNIT3, input, lct, nlines
       REAL*8 eng(10), tau1(10), tau2(10,7)
       DATA (eng(k),k=1,10)/.05D0, .06D0, .08D0, .1D0, .15D0, .2D0, .3D0,
@@ -896,7 +908,7 @@ C     MeV (NIST)
       integer*4 verbose, vflag
       common /verb/ verbose
 
-      character(80) line
+      character(512) line
       integer lineend
       
       real*8 bst_me(c_double), dimension(999)
@@ -924,13 +936,15 @@ C     end do
       nlines = infile%nlines
       do i = 1,infile%nlines
          lineend = 0
-         do j=1,256
+         do j=1,512
             READ(infile%lines(j,i),'(A)') line(j:j)
-            if ((iachar(line(j:j)) .eq. 0) .OR.
-     &           (iachar(line(j:j)) .eq. 10)) then
+C            write(*,*) j, iachar(line(j:j)), line(j:j)
+            if (((iachar(line(j:j)) .eq. 0) .OR.
+     &           (iachar(line(j:j)) .eq. 10)) .OR.
+     &          ((iachar(line(j:j)) .eq. 13) .OR.
+     &           iachar(line(j:j)) .eq. 15)) then
                lineend = 1
             end if
-            
             if (lineend .eq. 1) line(j:j) = ' '
          end do
          input(i) = line
@@ -1170,7 +1184,7 @@ C.............................................................................
 C     Start reading input file.
 C     100  READ (input%lines(:,lct),99001) op1 , op2
  100  READ(input(lct),99001) op1 , op2
-      lct=lct+1      
+      lct=lct+1
 99001 FORMAT (1A3,1A4)
       
       IF ( op1.EQ.'OP, ' ) THEN
@@ -1840,6 +1854,7 @@ C                       Now we calculate for all the mesh points.
                         naa = NDST(lx)
                         IF ( IRAWEX(lx).EQ.0 ) naa = NANG(lx)
                         iskf = naa - 1
+                        output%experiment(lx)%ndets = naa
                         DO ja = 1 , naa ! Loop over detector angles
                            icll = 3 ! Weighting mode
                            DO je = 1 , ne ! ne = number of energy mesh points
@@ -1971,8 +1986,10 @@ C   equally spaced energies, which we integrate in the same way.
      &                             'NORMALIZED YIELD'/)
                            DO jd = 1 , idr
                               WRITE (15,*) GRAD(jd)
-                           ENDDO
+                           ENDDO                           
                            output%experiment(lx)%nyields = idr
+C                           output%experiment(lx)%dets(ja)%number = ja
+C                           output%experiment(lx)%dets(ja)%nyields = idr
                            DO jd = 1 , idr
                               ni = KSEQ(jd,3)
                               nf = KSEQ(jd,4)
@@ -1980,10 +1997,19 @@ C   equally spaced energies, which we integrate in the same way.
                               WRITE (22,99049) ni , nf , SPIN(ni) , 
      &                               SPIN(nf) , GRAD(jd) , GRAD(jd)
      &                                /GRAD(IDRN) ! IDRN is the normalising transition
-                              end if
+                           end if
+C                           output%experiment(lx)%dets(ja)%yield(jd)
+C     &                      = GRAD(jd)
+C                           output%experiment(lx)%dets(ja)%ni(jd) = ni
+C                           output%experiment(lx)%dets(ja)%nf(jd) = nf
+                              if ( ja.EQ.1 ) then                                 
                               output%experiment(lx)%yield(jd) = GRAD(jd)
                               output%experiment(lx)%ni(jd) = ni
                               output%experiment(lx)%nf(jd) = nf
+                              ELSE
+                                 output%experiment(lx)%yield(jd)
+     &                     = output%experiment(lx)%yield(jd) + GRAD(jd)
+                              end if
                            ENDDO
                         ENDDO ! Loop over detector angles ja
 
@@ -2013,7 +2039,7 @@ C   equally spaced energies, which we integrate in the same way.
 99021                FORMAT (1x//2x,
      &                      'Total integrated Rutherford cross section='
      &                      ,1E8.3,' for exp. ',1I2/)
-                  ENDDO
+                  ENDDO ! loop over number of experiments
                   REWIND 17 ! Added PJN (17Jul2009)
                   IF ( ipinf.NE.0 ) THEN
                      ngpr = 0
@@ -3395,6 +3421,9 @@ C     Handle OP,ERRO
                         SUMCL(jgl,js) = 0.
                      ENDDO
                   ENDDO
+                  if (op2.EQ.'POIN' .AND. IPRM(11) .EQ. 1) then
+                     output%experiment(IEXP)%ndets = 0
+                  end if                  
                   DO jgl = 1 , nogeli ! For each detector angle
                      IF ( IRAWEX(IEXP).NE.0 ) THEN
                         IF ( op2.EQ.'POIN' .AND. IPRM(20).EQ.1 ) THEN
@@ -3502,6 +3531,9 @@ C---- this bit removed in gosia2 start
                      ENDDO
 C---- this bit removed in gosia2 end
                      output%experiment(IEXP)%nyields = idr
+C     output%experiment(IEXP)%dets(inclus)%nyields = idr
+                     output%experiment(IEXP)%ndets =
+     &                    output%experiment(IEXP)%ndets + 1
                      DO jyi = 1 , idr
                         ni = KSEQ(jyi,3)
                         nf = KSEQ(jyi,4)
@@ -3510,10 +3542,22 @@ C---- this bit removed in gosia2 end
                            WRITE (22,99049) ni , nf , SPIN(ni) , 
      &                             SPIN(nf) , YGN(jyi) ,
      &                             YGN(jyi)/YGN(IDRN)
-                           end if
+                        end if
+                           if (output%experiment(IEXP)%ndets.EQ.1) then
                            output%experiment(IEXP)%ni(jyi) = ni
                            output%experiment(IEXP)%nf(jyi) = nf
                            output%experiment(IEXP)%yield(jyi) = YGN(jyi)
+                           else
+                           output%experiment(IEXP)%yield(jyi) =
+     &                     output%experiment(IEXP)%yield(jyi) + YGN(jyi)
+                           end if
+
+C                           output%experiment(IEXP)%dets(inclus)%ni(jyi)
+C     &                          = ni
+C                           output%experiment(IEXP)%dets(inclus)%nf(jyi)
+C     &                          = nf
+C                           output%experiment(IEXP)%dets(inclus)
+C     &                      %yield(jyi) = YGN(jyi)
                         ENDIF
                         
                         IF ( ifwd.EQ.1 ) THEN
@@ -8285,7 +8329,7 @@ C don't go outside the limits specified by the user.
       INTEGER*4 JENTR , ICS
       COMMON /ERCAL / JENTR , ICS      
       INTEGER*4 IUNIT3 , JZB, lct, nlines
-      character(len=256), dimension(1000) :: input
+      character(len=512), dimension(1000) :: input
       COMMON /SWITCH/ JZB , IUNIT3, input, lct, nlines
       DATA chirf/0./,dm/0./,sumg2/0./
       integer verbose
@@ -13488,7 +13532,7 @@ C zero, the function returns. It keeps looping until a unit zero is reached.
       CHARACTER(80) DIRECTORY
       CHARACTER(200) fullpath
       INTEGER*4 IUNIT3 , JZB, lct, nlines
-      character(len=256), dimension(1000) :: input
+      character(len=512), dimension(1000) :: input
       COMMON /SWITCH/ JZB , IUNIT3, input, lct, nlines
       character*80 line
  100  line = trim(input(lct))
@@ -13851,7 +13895,7 @@ C Here we parse the input of the OP,YIEL command and store the values.
       INTEGER*4 ITS
       COMMON /TRB   / ITS
       INTEGER*4 IUNIT3 , JZB, lct, nlines
-      character(len=256), dimension(1000) :: input
+      character(len=512), dimension(1000) :: input
       COMMON /SWITCH/ JZB , IUNIT3, input, lct, nlines
       integer verbose
       common /verb/ verbose
@@ -14003,15 +14047,15 @@ C     Read branching ratios
      &        'NF2',5X,'RATIO(1:2)',9X,'ERROR')
          end if
          DO lb = 1 , NBRA ! I1,I2,I3,I4,B,DB repeated NBRA times
-            READ (INPUT(LCT),'(A)') line
+            READ (input(lct),'(A)') line
             lct=lct+1
             READ (line,*,END=203,ERR=203) ns1 , ns2 , ns3 , ns4 ,
      &           BRAT(lb,1) , BRAT(lb,2) , BRAT(lb,3)
-            lct=lct+1
+
             GOTO 303
   203       READ (line,*) ns1 , ns2 , ns3 , ns4 , BRAT(lb,1) ,
      &           BRAT(lb,2)
-            lct=lct+1
+
             BRAT(lb,3) = BRAT(lb,2)
   303       BRAT(lb,2) = BRAT(lb,2)/(SQRT(wbra)+1.E-10) ! Relative error
             BRAT(lb,3) = BRAT(lb,3)/(SQRT(wbra)+1.E-10) ! Relative error
@@ -14399,7 +14443,7 @@ C
       COMMON /CLCOM / LAMDA(8) , LEAD(2,1500) , LDNUM(8,100) , LAMMAX , 
      &                MULTI(8)
       INTEGER*4 IUNIT3 , JZB, lct, nlines
-      character(len=256), dimension(1000) :: input
+      character(len=512), dimension(1000) :: input
       COMMON /SWITCH/ JZB , IUNIT3, input, lct, nlines
       INTEGER*4 n1, n2, isfirst, newen
       CHARACTER*1024 idx_name, icc_name

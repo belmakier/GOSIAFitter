@@ -7,7 +7,28 @@
 
 //Please note that this changes only the C++ side; corresponding definitions in
 //GOSIA source file must match this definition
-#define INPUTFILE_LINELEN 256
+#define INPUTFILE_LINELEN 512
+
+/*
+struct out_det {
+  int number;
+  int nyields;
+  int *ni;
+  int *nf;
+  double *yield;
+
+  out_det() {
+    ni = new int[256];
+    nf = new int[256];
+    yield = new double[256];
+  }
+  ~out_det() {
+    delete ni;
+    delete nf;
+    delete yield;
+  }
+};
+*/
 
 struct out_exp {
   double ruth;
@@ -17,10 +38,15 @@ struct out_exp {
   double theta_high;
   int number;
 
+  //these are total across all detectors
   int nyields;
-  int ni[999];
-  int nf[999];
-  double yield[999];
+  int ni[256];
+  int nf[256];
+  double yield[256];
+
+  //these are actually what GOSIA calls "clusters"
+  int ndets;
+  //out_det dets[32];
 };
 
 struct out_yields {
