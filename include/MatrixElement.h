@@ -28,6 +28,8 @@ public:
   virtual void Update(const double *res, int &parct) = 0; //this updates the values of *this from those contained in res
   virtual void Kick(TRandom3 &rand) = 0; //randomizes/perturbs somehow
   virtual void Print(std::ostream &out) const = 0;
+  virtual double GetValue(int i) const = 0; //this returns the ith parameter value
+  virtual void SetValue(int i, double par) = 0; //set the ith parameter value
   bool GetFixed() const { return fixed; }
   void SetFixed(bool f) { fixed = f; }
   int GetIndex() const { return indx; }
@@ -102,6 +104,15 @@ public:
   void Populate(std::vector<double> &parameters,
                         std::vector<double> &par_LL,
                           std::vector<double> &par_UL);
+  double GetValue(int i) const {
+    if (i==0) { return matrixElement; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; return 0; }
+  }
+
+  void SetValue(int i, double par) {
+    if (i==0) { matrixElement = par; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; }
+  }
 
 	private:
 		int 		index;			/*!< Matrix element index */
@@ -184,6 +195,16 @@ class RelativeMatrixElement : public FittingElement {
                         std::vector<double> &par_LL,
                 std::vector<double> &par_UL);
 
+  double GetValue(int i) const {
+    if (i==0) { return rel; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; return 0; }
+  }
+
+  void SetValue(int i, double par) {
+    if (i==0) { rel = par; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; }
+  }
+
 	private:
 		int 		  index;			/*!< Matrix element index */
 		int 		  lambda;			/*!< Matrix element multipolarity */
@@ -241,6 +262,19 @@ public:
   void SetMixingRatio(double mr) { mixingRatio = mr; }
   double GetMixingRatioUpperLimit() { return mixingRatio_ul; }
   double GetMixingRatioLowerLimit() { return mixingRatio_ll; }
+
+  double GetValue(int i) const {
+    if (i==0) { return width; }
+    else if (i==1) { return mixingRatio; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; return 0; }
+  }
+
+  void SetValue(int i, double par) {
+    if (i==0) { width = par; }
+    else if (i==1) { mixingRatio = par; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; }
+  }
+
 
 private:
   int initialState;
@@ -304,6 +338,20 @@ public:
   double GetMixingRatioUpperLimit() { return mixingRatio_ul; }
   double GetMixingRatioLowerLimit() { return mixingRatio_ll; }
 
+  double GetValue(int i) const {
+    if (i==0) { return widthRel; }
+    else if (i==1) { return mixingRatio; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; return 0; }
+  }
+
+  void SetValue(int i, double par) {
+    if (i==0) { widthRel = par; }
+    else if (i==1) { mixingRatio = par; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; }
+  }
+
+
+
 private:
   int initialState;
   int finalState;
@@ -355,6 +403,18 @@ public:
   double GetMatRelUpperLimit() { return matRel_ul; }
   double GetMatRelLowerLimit() { return matRel_ll; }
   void SetMatRel(double mr) { matRel = mr; }
+
+  double GetValue(int i) const {
+    if (i==0) { return matRel; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; return 0; }
+  }
+
+  void SetValue(int i, double par) {
+    if (i==0) { matRel = par; }
+    else { std::cerr << "Warning! Invalid index requested" << std::endl; }
+  }
+
+
 
 private:
   int initialState;
