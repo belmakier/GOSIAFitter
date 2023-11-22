@@ -1078,6 +1078,7 @@ void GOSIASimMinFCN::CalcBeamCorrectionFactors() {
       int	fina = gosiaReader_inti.GetGOSIAData().at(e).GetDataPoint(ee).GetFinalIndex();
       double	point = gosiaReader_point.GetGOSIAData().at(e).GetDataPoint(ee).GetCounts();
       double	inti = gosiaReader_inti.GetGOSIAData().at(e).GetDataPoint(ee).GetCounts();
+      //std::cout << point << "   " << inti << std::endl;
       if(point > 1e-8){
         tmpMat[init][fina] = inti/point;
         tmpMat[fina][init] = inti/point;

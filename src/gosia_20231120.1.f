@@ -541,19 +541,22 @@ C
 C      end type out_det
       
       type, bind(C) :: out_exp
+      integer(c_int) :: number
+
+      integer(c_int) :: ndets;
+      
+      integer(c_int) :: nyields
+      integer(c_int), dimension(999) :: ni
+      integer(c_int), dimension(999) :: nf
+
       real(c_double) :: ruth
       real(c_double) :: en_low
       real(c_double) :: en_high
       real(c_double) :: theta_low
       real(c_double) :: theta_high
-      integer(c_int) :: number
+      
+      real(c_double), dimension (999) :: yield
 
-      integer(c_int) :: nyields
-      integer(c_int), dimension(256) :: ni
-      integer(c_int), dimension(256) :: nf
-      real(c_double), dimension (256) :: yield
-
-      integer(c_int) :: ndets;
 C      type(out_det), dimension(32) :: dets;      
       
       end type out_exp
@@ -2472,6 +2475,7 @@ C                       Now we calculate for all the mesh points.
                         naa = NDST(lx)
                         IF ( IRAWEX(lx).EQ.0 ) naa = NANG(lx)
                         iskf = naa - 1
+                        output%experiment(lx)%ndets = naa
                         DO ja = 1 , naa ! Loop over detector angles
                            icll = 3 ! Weighting mode
                            DO je = 1 , ne ! ne = number of energy mesh points
@@ -2601,9 +2605,18 @@ C                              WRITE (15,*) GRAD(jd)
      &                               SPIN(nf) , GRAD(jd) , GRAD(jd)
      &                                /GRAD(IDRN) ! IDRN is the normalising transition
                               end if
+C     output%experiment(lx)%dets(ja)%yield(jd)
+C     &                      = GRAD(jd)
+C     output%experiment(lx)%dets(ja)%ni(jd) = ni
+C     output%experiment(lx)%dets(ja)%nf(jd) = nf
+                              if ( ja.EQ.1 ) then                                 
                               output%experiment(lx)%yield(jd) = GRAD(jd)
-                              output%experiment(lx)%ni(jd) = ni
-                              output%experiment(lx)%nf(jd) = nf
+                                 output%experiment(lx)%ni(jd) = ni
+                                 output%experiment(lx)%nf(jd) = nf
+                              ELSE
+                                 output%experiment(lx)%yield(jd)
+     &                      = output%experiment(lx)%yield(jd) + GRAD(jd)
+                              end if
                            ENDDO
                         ENDDO ! Loop over detector angles ja
 
@@ -3421,7 +3434,7 @@ C     Handle OP,ERRO
                         SUMCL(jgl,js) = 0.
                      ENDDO
                   ENDDO
-                  if (op2.EQ.'POIN' .AND. IPRM(11) .EQ. 1) then
+                  if (op2.EQ.'POIN' .OR. IPRM(11) .EQ. 1) then
                      output%experiment(IEXP)%ndets = 0
                   end if                  
                   DO jgl = 1 , nogeli ! For each detector angle

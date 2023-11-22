@@ -31,21 +31,25 @@ struct out_det {
 */
 
 struct out_exp {
+  int number;
+
+  //these are actually what GOSIA calls "clusters"
+  int ndets;
+  
+  //these are total across all detectors
+  int nyields;
+  int ni[999];
+  int nf[999];
+
   double ruth;
   double en_low;
   double en_high;
   double theta_low;
   double theta_high;
-  int number;
 
-  //these are total across all detectors
-  int nyields;
-  int ni[256];
-  int nf[256];
-  double yield[256];
+  double yield[999];
 
-  //these are actually what GOSIA calls "clusters"
-  int ndets;
+
   //out_det dets[32];
 };
 
