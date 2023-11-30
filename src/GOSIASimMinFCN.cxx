@@ -561,7 +561,9 @@ double GOSIASimMinFCN::operator()(const double* par){
                 << std::endl;
   }
   chisq += CompareMatrixElements(litMatrixElements_Target, nucl_t, me_chisq, NDF_lit, NDF);
-  std::cout << std::flush << std::endl;
+  if (verbosity > 1) {
+    std::cout << std::flush << std::endl;
+  }
 
   double litchisq = chisq;
   //	COULEX AND STUFF:
