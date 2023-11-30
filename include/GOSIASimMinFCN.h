@@ -79,8 +79,42 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 											}	/*!< Construct object with vector of experimental data to be fit */
 		virtual ~GOSIASimMinFCN()						{;					}
 
-		void	SetupCalculation();	/*!< Prepare the calculation */
+  void	SetupCalculation();	/*!< Prepare the calculation */
 
+  void PrintYieldHeader(int species);
+  double CompareYields(std::vector<ExperimentData> &exptData,
+                       std::vector<TMatrixD> &EffectiveCrossSection,
+                       std::vector<double> &scaling,
+                       std::vector<double> &exptchisq,
+                       double &chisqspecies,
+                       int &NDFspecies,
+                       int &NDF);
+
+  double CompareLifetimes(std::vector<LitLifetime> &litLifetimes,
+                          TransitionRates &rates,
+                          double &chisq_lifetime,
+                          int &NDF_lit,
+                          int &NDF);
+
+  double CompareBranchingRatios(std::vector<LitBranchingRatio> &litBranchingRatios,
+                                TransitionRates &rates,
+                                double &chisq_branch,
+                                int &NDF_lit,
+                                int &NDF);
+
+  double CompareMixingRatios(std::vector<LitMixingRatio> &litMixingRatios,
+                             TransitionRates &rates,
+                             double &chisq_mr,
+                             int &NDF_lit,
+                             int &NDF);
+
+  double CompareMatrixElements(std::vector<LitMatrixElement> &LitMatrixElements,
+                               Nucleus &nucl,
+                               double &chisq_me,
+                               int &NDF_lit,
+                               int &NDF);
+
+  
 		virtual void ClearAll();	/*!< Clear all vectors */
 
   void SetWorkingDir(std::string s) { workingDir = s; }

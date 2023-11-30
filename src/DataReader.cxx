@@ -24,6 +24,7 @@ void	DataReader::ReadDataFile(const char* datafilename){
 
 	std::string line;
 	while(std::getline(infile,line)){
+    if (line.size()==0) { continue; }
 		std::size_t found = line.find("!"); // Comment
 		if(found == std::string::npos){
 			std::istringstream ss(line);
@@ -46,15 +47,17 @@ void	DataReader::ReadDataFile(const char* datafilename){
 			}
 			ss >> initial_state >> final_state >> counts >> uncertainty;
 
-			if(initial_state > 100 && final_state > 100){	// Doublet
+			if(initial_state > 100 || final_state > 100){	// Doublet
 				int	i1	= initial_state / 100;
 				int	f1	= final_state / 100;
 				int 	i2	= initial_state - i1 * 100;			
 				int 	f2	= final_state - f1 * 100;
+        /*
 				std::cout	<< "Doublet:"
 						<< std::endl;
 				std::cout	<< i1	<< "\t" << f1 << "\t" << i2 << "\t" << f2	
 						<< std::endl;
+        */
 				tmpExpt.AddDoublet(i1,f1,i2,f2,counts,uncertainty);
 			}
 			else if(initial_state < fNucleus.GetNstates() && final_state < fNucleus.GetNstates() && initial_state >= 0 && final_state >= 0){

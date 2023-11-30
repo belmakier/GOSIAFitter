@@ -1039,7 +1039,11 @@ void GOSIASimFitter::WriteBeamFittingParameters(std::ostream &outstream) {
   for (int i=0; i<fittingElements_Beam.size(); ++i) {
     FittingElement *fe = fittingElements_Beam[i];
     for (int j=0; j<fe->GetNPars(); ++j) {
-      outstream << i << "   " << fe->GetName() << "  " << fe->GetType() << "   " << j << "   " << fe->GetValue(j) << std::endl;
+      outstream << std::setw(5) << std::left << i 
+                << std::setw(15) << std::left << fe->GetName() 
+                << std::setw(15) << std::left << fe->GetType()
+                << std::setw(5) << std::left << j
+                << std::setw(15) << std::left << fe->GetValue(j) << std::endl;
     }
   }
 }
@@ -1054,7 +1058,11 @@ void GOSIASimFitter::WriteTargetFittingParameters(std::ostream &outstream) {
   for (int i=0; i<fittingElements_Target.size(); ++i) {
     FittingElement *fe = fittingElements_Target[i];
     for (int j=0; j<fe->GetNPars(); ++j) {
-      outstream << i << "   " << fe->GetName() << "  " << fe->GetType() << "   " << j << fe->GetValue(j) << std::endl;
+      outstream << std::setw(5) << std::left << i 
+                << std::setw(15) << std::left << fe->GetName() 
+                << std::setw(15) << std::left << fe->GetType()
+                << std::setw(5) << std::left << j
+                << std::setw(15) << std::left << fe->GetValue(j) << std::endl;
     }
   }
 }
@@ -1075,7 +1083,7 @@ void GOSIASimFitter::ReadBeamFittingParameters(std::string filename) {
 
     FittingElement *fe = fittingElements_Beam[i];
     if (name.compare(fe->GetName())) { std::cerr << "Error! Parameter " << name << " is not the same as " << fe->GetName() << std::endl; exit(1); }
-    if (name.compare(fe->GetType())) { std::cerr << "Error! Parameter type " << type << " is not the same as " << fe->GetType() << std::endl; exit(1); }
+    if (type.compare(fe->GetType())) { std::cerr << "Error! Parameter type " << type << " is not the same as " << fe->GetType() << std::endl; exit(1); }
 
     fe->SetValue(j, value);    
   }

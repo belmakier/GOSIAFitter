@@ -21,6 +21,407 @@ void GOSIASimMinFCN::SetupCalculation(){
 
 }
 
+double GOSIASimMinFCN::CompareLifetimes(std::vector<LitLifetime> &litLifetimes, TransitionRates &rates, double &chisq_lifetime, int &NDF_lit, int &NDF ) {
+
+  //rates_b.Print();
+
+  double chisq = 0;
+  int printct = 0;
+
+  for(unsigned int i=0;i<litLifetimes.size();i++){
+    double 	tmp = 0;
+    int	index		= litLifetimes.at(i).GetIndex();
+    double	lifetime	= litLifetimes.at(i).GetLifetime();
+    double	calcLifetime	= rates.GetLifetimes()[index];
+    if(fLikelihood){
+      double	sigma		= litLifetimes.at(i).GetUpUnc() * litLifetimes.at(i).GetDnUnc();
+      double	sigma_prime	= (litLifetimes.at(i).GetUpUnc() - litLifetimes.at(i).GetDnUnc());
+      chisq 			+= 0.5 * TMath::Power((calcLifetime - lifetime),2)/(sigma + sigma_prime * (calcLifetime - lifetime));
+    }
+    else{
+      if(calcLifetime > lifetime)
+        tmp = (calcLifetime - lifetime) / litLifetimes.at(i).GetUpUnc();
+      else
+        tmp = (calcLifetime - lifetime) / litLifetimes.at(i).GetDnUnc();
+      chisq += tmp * tmp;
+      chisq_lifetime += tmp*tmp;
+      if (verbosity>1) {
+        std::cout << std::setw(5) << std::left << index 
+                  << std::setw(12) << std::left << calcLifetime
+                  << std::setw(12) << std::left << lifetime
+                  << std::setw(12) << std::left << litLifetimes.at(i).GetUpUnc()
+                  << std::setw(12) << std::left << tmp*tmp;
+        if (printct%2 == 1) {
+          std::cout << std::endl;
+        }
+        else {
+          std::cout << std::setw(7) << " "
+                    << std::setw(1) << "|"
+                    << std::setw(7) << " ";
+        }
+        printct += 1;
+      }
+    }
+    NDF++;
+    NDF_lit++;
+  }
+  return chisq;
+}
+
+double GOSIASimMinFCN::CompareBranchingRatios(std::vector<LitBranchingRatio> &litBranchingRatios, TransitionRates &rates, double &chisq_branch, int &NDF_lit, int &NDF) {
+
+  int printct = 0;
+  double chisq = 0;
+  for(unsigned int i=0;i<litBranchingRatios.size();i++){
+    double 	tmp 		= 0;
+    int	index_init 	= litBranchingRatios.at(i).GetInitialIndex();
+    int	index_final1	= litBranchingRatios.at(i).GetFinalIndex_1();
+    int	index_final2	= litBranchingRatios.at(i).GetFinalIndex_2();
+    double	BR		= litBranchingRatios.at(i).GetBranchingRatio();
+    double  calcBR		= rates.GetBranchingRatios()[index_final1][index_init] / rates.GetBranchingRatios()[index_final2][index_init];
+    if(fLikelihood){
+      double	sigma		= litBranchingRatios.at(i).GetUpUnc() * litBranchingRatios.at(i).GetDnUnc();
+      double	sigma_prime	= (litBranchingRatios.at(i).GetUpUnc() - litBranchingRatios.at(i).GetDnUnc());
+      chisq 			+= 0.5 * TMath::Power((calcBR - BR),2)/(sigma + sigma_prime * (calcBR - BR));
+    }
+    else{
+      if(calcBR > BR) {
+        tmp = (BR - calcBR) / litBranchingRatios.at(i).GetUpUnc();
+      }
+      else {
+        tmp = (BR - calcBR) / litBranchingRatios.at(i).GetDnUnc();
+      }
+      chisq += tmp * tmp;
+      chisq_branch += tmp*tmp;      
+      if (verbosity>1) {
+        std::cout	<< std::setw(5) << std::left << index_init 
+                  << std::setw(5) << std::left << index_final1
+                  << std::setw(5) << std::left << index_final2
+                  << std::setw(13) << std::left << calcBR
+                  << std::setw(10) << std::left << BR
+                  << std::setw(10) << std::left << litBranchingRatios.at(i).GetUpUnc()
+                  << std::setw(13) << std::left << tmp*tmp ;
+        if (printct%2 == 1) {
+          std::cout << std::endl;
+        }
+        else {
+          std::cout << std::setw(7) << " "
+                    << std::setw(1) << "|"
+                    << std::setw(7) << " ";
+        }
+        printct += 1;
+      }
+    }
+    NDF++;
+    NDF_lit++;
+  }
+  return chisq;
+}
+
+double GOSIASimMinFCN::CompareMixingRatios(std::vector<LitMixingRatio> &litMixingRatios, TransitionRates &rates, double &chisq_mixingratio, int &NDF_lit, int &NDF) {
+  int printct = 0;
+  double chisq;
+
+  for(unsigned int i=0;i<litMixingRatios.size();i++){
+    double 	tmp;
+    int 	index_init	= litMixingRatios.at(i).GetInitialIndex();
+    int	index_final	= litMixingRatios.at(i).GetFinalIndex();
+    double	delta		= litMixingRatios.at(i).GetMixingRatio();
+    double	calcDelta	= rates.GetMixingRatios()[index_final][index_init];
+    if(fLikelihood){
+      double	sigma		= litMixingRatios.at(i).GetUpUnc() * litMixingRatios.at(i).GetDnUnc();
+      double	sigma_prime	= (litMixingRatios.at(i).GetUpUnc() - litMixingRatios.at(i).GetDnUnc());
+      chisq 			+= 0.5 * TMath::Power((calcDelta - delta),2)/(sigma + sigma_prime * (calcDelta - delta));
+    }
+    else{
+      if(calcDelta > delta)
+        tmp = (delta - calcDelta) / litMixingRatios.at(i).GetUpUnc();
+      else
+        tmp = (delta - calcDelta) / litMixingRatios.at(i).GetDnUnc();
+      chisq += tmp * tmp;		
+      chisq_mixingratio += tmp*tmp;
+      if (verbosity>1) {
+        std::cout	<< std::setw(5) << std::left << index_init 
+                  << std::setw(5) << std::left << index_final
+                  << std::setw(12) << std::left << calcDelta
+                  << std::setw(10) << std::left << delta
+                  << std::setw(10) << std::left << litMixingRatios.at(i).GetUpUnc()
+                  << std::setw(12) << std::left << tmp*tmp;
+        if (printct%2 == 1) {
+          std::cout << std::endl;
+        }
+        else {
+          std::cout << std::setw(7) << " "
+                    << std::setw(1) << "|"
+                    << std::setw(7) << " ";
+        }
+        printct += 1;
+
+      }
+    }
+    NDF++;
+    NDF_lit++;
+  }
+  return chisq;
+}
+
+double GOSIASimMinFCN::CompareMatrixElements(std::vector<LitMatrixElement> &litMatrixElements, Nucleus &nucl, double &chisq_matel, int &NDF_lit, int &NDF) {
+  double chisq = 0;
+  int printct = 0;
+  for(unsigned int i=0;i<litMatrixElements.size();i++){
+    double tmp;
+    int	mult		= litMatrixElements.at(i).GetMultipolarity();
+    int 	index_init	= litMatrixElements.at(i).GetInitialIndex();
+    int	index_final	= litMatrixElements.at(i).GetFinalIndex();
+    double	ME		= litMatrixElements.at(i).GetMatrixElement();
+    double	calcME		= nucl.GetMatrixElements().at(mult)[index_init][index_final];
+    if(fLikelihood){
+      double	sigma		= litMatrixElements.at(i).GetUpUnc() * litMatrixElements.at(i).GetDnUnc();
+      double	sigma_prime	= (litMatrixElements.at(i).GetUpUnc() - litMatrixElements.at(i).GetDnUnc());
+      chisq 			+= 0.5 * TMath::Power((calcME - ME),2)/(sigma + sigma_prime * (calcME - ME));
+    }
+    else{
+      if (std::abs(litMatrixElements.at(i).GetSign()) > 0) {
+        if(calcME > ME) {
+          tmp = (ME - calcME) / litMatrixElements.at(i).GetUpUnc();
+        }
+        else {
+          tmp = (ME - calcME) / litMatrixElements.at(i).GetDnUnc();
+        }
+      }
+      else { //don't know sign of literature matrix element, compare absolute values
+        if(std::abs(calcME) > std::abs(ME)) {
+          tmp = (std::abs(ME) - std::abs(calcME)) / litMatrixElements.at(i).GetUpUnc();
+        }
+        else {
+          tmp = (std::abs(ME) - std::abs(calcME)) / litMatrixElements.at(i).GetDnUnc();
+        }
+      }
+        
+      chisq += tmp * tmp;		
+      chisq_matel += tmp*tmp;
+      if (verbosity>1) {
+        std::cout	<< std::setw(5) << std::left << index_init 
+                  << std::setw(5) << std::left << index_final
+                  << std::setw(5) << std::left << mult
+                  << std::setw(14) << std::left << calcME
+                  << std::setw(10) << std::left << ME
+                  << std::setw(10) << std::left << litMatrixElements.at(i).GetUpUnc()
+                  << std::setw(14) << std::left << tmp*tmp;
+        if (printct%2 == 1) {
+          std::cout << std::endl;
+        }
+        else {
+          std::cout << std::setw(7) << " "
+                    << std::setw(1) << "|"
+                    << std::setw(7) << " ";
+        }
+        printct += 1;
+
+      }
+    }
+    NDF++;
+    NDF_lit++;
+  }
+  return chisq;
+}
+
+void GOSIASimMinFCN::PrintYieldHeader(int species) {
+  if (species == 0) { //beam
+    if (exptData_Beam.size() == 0) { return; }
+    std::cout 	<< std::setw( 7) << std::left << "Beam:"
+                << std::endl;
+  }
+  else if (species == 1) { //target
+    if (exptData_Target.size() == 0) { return; }
+    std::cout 	<< std::setw( 7) << std::left << "Target:"
+                << std::endl;
+  }
+  std::cout 	<< std::setw( 4) << std::left << " ";
+  std::cout	<< std::setw(10) << std::left << "Scaling:";
+
+  if (!fLikelihood) {
+    std::cout 	<< std::setw( 6) << std::left << "Init:"
+                << std::setw( 6) << std::left << "Finl:"
+                << std::setw(14) << std::left << "Calc:"
+                << std::setw(14) << std::left << "Expt:"
+                << std::setw(14) << std::left << "Err:"
+                << std::setw(14) << std::left << "C/E:"
+                << std::setw(14) << std::left << "Chisq:"
+                << std::setw(20) << std::left << " "
+                << std::setw( 6) << std::left << "Init:"
+                << std::setw( 6) << std::left << "Finl:"
+                << std::setw(14) << std::left << "Calc:"
+                << std::setw(14) << std::left << "Expt:"
+                << std::setw(14) << std::left << "Err:"
+                << std::setw(14) << std::left << "C/E:"
+                << std::setw(14) << std::left << "Chisq:";
+  }
+  else {
+       std::cout 	<< std::setw( 6) << std::left << "Init:"
+                << std::setw( 6) << std::left << "Finl:"
+                << std::setw(14) << std::left << "Calc:"
+                << std::setw(14) << std::left << "Expt:"
+                << std::setw(14) << std::left << "C/E:"
+                << std::setw(14) << std::left << "-Ln(L) cont.:"
+                << std::setw(20) << std::left << " "
+                << std::setw( 6) << std::left << "Init:"
+                << std::setw( 6) << std::left << "Finl:"
+                << std::setw(14) << std::left << "Calc:"
+                << std::setw(14) << std::left << "Expt:"
+                << std::setw(14) << std::left << "C/E:"
+                << std::setw(14) << std::left << "-Ln(L) cont.:";
+  } 
+  std::cout 	<< std::endl;
+}
+  
+double GOSIASimMinFCN::CompareYields(std::vector<ExperimentData> &exptData,
+                                     std::vector<TMatrixD> &EffectiveCrossSection,
+                                     std::vector<double> &scaling,
+                                     std::vector<double> &exptchisq,
+                                     double &chisqspecies,
+                                     int &NDFspecies,
+                                     int &NDF) {
+  double chisq = 0;
+  exptchisq.resize(exptData.size());
+  for(unsigned int i=0;i<exptData.size();i++){
+    exptchisq[i] = 0;
+    if(expt_weights.at(i) == 0) 
+      continue;
+    if(verbosity>1){
+      std::cout	<< std::setw(4) << std::left << i+1;
+      std::cout	<< std::setw(10) << std::left << scaling.at(i);
+    }
+    int print_ct = 0;
+    for(unsigned int t=0;t<exptData.at(i).GetData().size();++t){
+      double 	tmp 		= 0;
+      int	index_init 	= exptData.at(i).GetData().at(t).GetInitialIndex();
+      int	index_final 	= exptData.at(i).GetData().at(t).GetFinalIndex();
+      double 	calcCounts 	= scaling.at(i) * EffectiveCrossSection.at(i)[index_final][index_init];
+      double 	exptCounts 	= exptData.at(i).GetData().at(t).GetCounts();
+      double	sigma		= exptData.at(i).GetData().at(t).GetUpUnc() * exptData.at(i).GetData().at(t).GetDnUnc();
+      double	sigma_prime	= (exptData.at(i).GetData().at(t).GetUpUnc() - exptData.at(i).GetData().at(t).GetDnUnc());
+      sigma			/= expt_weights.at(i);
+      sigma_prime		/= expt_weights.at(i);
+
+      if (exptCounts == 0) { //treat as limit
+        double limit = exptData.at(i).GetData().at(t).GetUpUnc();
+        if (calcCounts > limit) {
+          exptCounts = 0.01;
+        }
+      }
+
+      if(exptCounts > 0 && sigma > 0){
+        if (verbosity>1) {
+          if(fLikelihood){
+            std::cout 	<< std::setw( 6) << std::left << index_init 
+                        << std::setw( 6) << std::left << index_final 
+                        << std::setw(14) << std::left << calcCounts 
+                        << std::setw(14) << std::left << exptCounts 
+                        << std::setw(14) << std::left << calcCounts/exptCounts
+                        << std::setw(14) << std::left << 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts)) << std::endl << "              ";
+          }
+          else{
+            std::cout 	<< std::setw( 6) << std::left << index_init 
+                        << std::setw( 6) << std::left << index_final 
+                        << std::setw(14) << std::left << calcCounts 
+                        << std::setw(14) << std::left << exptCounts 
+                        << std::setw(14) << std::left << exptData.at(i).GetData().at(t).GetUpUnc()
+                        << std::setw(14) << std::left << calcCounts/exptCounts
+                        << std::setw(14) << std::left << TMath::Power((calcCounts - exptCounts)/exptData.at(i).GetData().at(t).GetUpUnc(),2);              
+            if (print_ct%2 == 0) {
+              std::cout << std::setw(20) << std::left << " ";
+              if (t==(exptData.at(i).GetData().size()+
+                      exptData.at(i).GetDoublet().size()-1)) { std::cout << std::endl; }
+            }
+            else { std::cout << std::endl << std::setw(14) << std::left << " "; }
+          }
+          print_ct += 1;
+        }
+        if(fLikelihood){
+          chisq		+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
+          chisqspecies += 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
+        }
+        else{
+          if(calcCounts > exptCounts)
+            tmp 		= (calcCounts - exptCounts) / exptData.at(i).GetData().at(t).GetUpUnc();
+          else
+            tmp 		= (calcCounts - exptCounts) / exptData.at(i).GetData().at(t).GetDnUnc();
+          chisq		+= tmp * tmp;
+          chisqspecies += tmp * tmp;
+          exptchisq[i]	+= tmp * tmp;
+        }
+        NDF++;
+        NDFspecies++;
+      }
+    }
+    for(unsigned int t=0;t<exptData.at(i).GetDoublet().size();++t){
+      double 	tmp 		= 0;
+      int	index_init1 	= exptData.at(i).GetDoublet().at(t).GetInitialIndex1();
+      int	index_final1 	= exptData.at(i).GetDoublet().at(t).GetFinalIndex1();
+      int	index_init2 	= exptData.at(i).GetDoublet().at(t).GetInitialIndex2();
+      int	index_final2 	= exptData.at(i).GetDoublet().at(t).GetFinalIndex2();
+      double 	calcCounts 	= scaling.at(i) * (EffectiveCrossSection.at(i)[index_final1][index_init1] + EffectiveCrossSection.at(i)[index_final2][index_init2]);
+      double 	exptCounts 	= exptData.at(i).GetDoublet().at(t).GetCounts();
+      double	sigma		= exptData.at(i).GetDoublet().at(t).GetUpUnc() * exptData.at(i).GetDoublet().at(t).GetDnUnc();
+      double	sigma_prime	= (exptData.at(i).GetDoublet().at(t).GetUpUnc() - exptData.at(i).GetDoublet().at(t).GetDnUnc());
+      sigma			/= expt_weights.at(i);
+      sigma_prime		/= expt_weights.at(i);
+      if (exptCounts == 0) { //treat as limit
+        double limit = exptData.at(i).GetData().at(t).GetUpUnc();
+        if (calcCounts > limit) {
+          exptCounts = 0.01;
+        }
+      }
+      else if(calcCounts > 0 && sigma > 0){
+          if (verbosity>1) {
+            if(fLikelihood){
+              std::cout 	<< std::setw( 6) << std::left << index_init1*100 + index_init2
+                          << std::setw( 6) << std::left << index_final1*100 + index_final2
+                          << std::setw(14) << std::left << calcCounts 
+                          << std::setw(14) << std::left << exptCounts 
+                          << std::setw(14) << std::left << calcCounts/exptCounts
+                          << std::setw(14) << std::left << 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
+            }
+            else{
+              std::cout 	<< std::setw( 6) << std::left << index_init1*100 + index_init2 
+                          << std::setw( 6) << std::left << index_final1*100 + index_final2
+                          << std::setw(14) << std::left << calcCounts 
+                          << std::setw(14) << std::left << exptCounts 
+                          << std::setw(14) << std::left << exptData.at(i).GetDoublet().at(t).GetUpUnc()
+                          << std::setw(14) << std::left << calcCounts/exptCounts
+                          << std::setw(14) << std::left << TMath::Power((calcCounts - exptCounts)/exptData.at(i).GetData().at(t).GetUpUnc(),2);
+              if (print_ct%2 == 0) {
+                std::cout << std::setw(20) << std::left << " ";
+                if (t==exptData.at(i).GetDoublet().size()-1) { std::cout << std::endl; }
+              }
+              else { std::cout << std::endl << std::setw(14) << std::left << " "; }
+            }
+            print_ct += 1;
+          }
+        if(fLikelihood){
+          chisq		+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
+          chisqspecies	+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
+        }
+        else{
+          if(calcCounts > exptCounts)
+            tmp 		= (calcCounts - exptCounts) / exptData.at(i).GetData().at(t).GetUpUnc();
+          else
+            tmp 		= (calcCounts - exptCounts) / exptData.at(i).GetData().at(t).GetDnUnc();
+          chisq		+= tmp * tmp;
+          chisqspecies	+= tmp * tmp;
+          exptchisq[i]	+= tmp * tmp;
+        }
+        NDF++;
+        NDFspecies++;
+      }
+    }
+    if(verbosity>1)
+      std::cout << std::endl;
+  }
+  return chisq;
+}
+
 double GOSIASimMinFCN::operator()(const double* par){
 	std::cout 	<< std::setprecision(6);
 
@@ -57,7 +458,7 @@ double GOSIASimMinFCN::operator()(const double* par){
   }
 
   for (unsigned int i=0; i<FE_Target.size(); ++i) {
-    FE_Target.at(i)->Propagate(nucl_b,par,parct,0);  //this propagates the numbers from par into nucl_b correctly, as implemented in the FittingElement derived classes
+    FE_Target.at(i)->Propagate(nucl_t,par,parct,0);  //this propagates the numbers from par into nucl_t correctly, as implemented in the FittingElement derived classes
   }
   
   if (verbosity>1) {
@@ -82,358 +483,86 @@ double GOSIASimMinFCN::operator()(const double* par){
         }
       }      
     }
+    for (int i=0; i<FE_Target.size(); ++i) {
+      if (FE_Target[i]->GetFixed()) { continue; }
+      for (int j=0; j<FE_Target[i]->GetNPars(); ++j) {
+        std::cout << std::setw(10) << FE_Target[i]->GetName()
+                  << std::setw(1) << " "
+                  << std::setw(7) << FE_Target[i]->GetType()
+                  << std::setw(2) << " "
+                  << std::setw(12) << par[FE_Target[i]->GetIndex()+j];
+        if (linect < 4) {
+          std::cout << "  |  ";
+          linect += 1;
+        }
+        else {
+          std::cout << std::endl << std::setw(17) << " ";
+          linect = 0;
+        }
+      }      
+    }
     std::cout << std::endl;
   }
 
   // 	COMPARE WITH LITERATURE CONSTRAINTS:
-  // 	First, compare with the literature for the beam:
   TransitionRates rates_b(&nucl_b);
+  TransitionRates rates_t(&nucl_t);
 
-  //rates_b.Print();
-
+  // 	First, compare with the literature for the beam:
   double lifetime_chisq = 0;
-  int printct = 0;
-  if (verbosity > 1 &&litLifetimes_Beam.size() > 0) {
-    std::cout << "Lifetimes:" << std::endl;
-  }
-  for(unsigned int i=0;i<litLifetimes_Beam.size();i++){
-    double 	tmp = 0;
-    int	index		= litLifetimes_Beam.at(i).GetIndex();
-    double	lifetime	= litLifetimes_Beam.at(i).GetLifetime();
-    double	calcLifetime	= rates_b.GetLifetimes()[index];
-    if(fLikelihood){
-      double	sigma		= litLifetimes_Beam.at(i).GetUpUnc() * litLifetimes_Beam.at(i).GetDnUnc();
-      double	sigma_prime	= (litLifetimes_Beam.at(i).GetUpUnc() - litLifetimes_Beam.at(i).GetDnUnc());
-      chisq 			+= 0.5 * TMath::Power((calcLifetime - lifetime),2)/(sigma + sigma_prime * (calcLifetime - lifetime));
-    }
-    else{
-      if(calcLifetime > lifetime)
-        tmp = (calcLifetime - lifetime) / litLifetimes_Beam.at(i).GetUpUnc();
-      else
-        tmp = (calcLifetime - lifetime) / litLifetimes_Beam.at(i).GetDnUnc();
-      chisq += tmp * tmp;
-      lifetime_chisq += tmp*tmp;
-      if (verbosity>1) {
-        std::cout << std::setw(5) << std::left << index 
-                  << std::setw(12) << std::left << calcLifetime
-                  << std::setw(12) << std::left << lifetime
-                  << std::setw(12) << std::left << litLifetimes_Beam.at(i).GetUpUnc()
-                  << std::setw(12) << std::left << tmp*tmp;
-        if (printct%2 == 1) {
-          std::cout << std::endl;
-        }
-        else {
-          std::cout << std::setw(7) << " "
-                    << std::setw(1) << "|"
-                    << std::setw(7) << " ";
-        }
-        printct += 1;
-      }
-    }
-    NDF++;
-    NDF_lit++;
-  }
   double br_chisq = 0;
-  if(litBranchingRatios_Beam.size()>0 && verbosity>1)    
+  double mr_chisq = 0;
+  double me_chisq = 0;
+  
+  if (verbosity > 1 &&litLifetimes_Beam.size() > 0) {
+    std::cout << "Lifetimes (Beam):" << std::endl;
+  }
+  chisq += CompareLifetimes(litLifetimes_Beam, rates_b, lifetime_chisq, NDF_lit, NDF);
+  
+  if(litBranchingRatios_Beam.size()>0 && verbosity>1) {
     std::cout	<< std::endl << "BR (Beam):" 
               << std::endl;
-
-  printct = 0;
-  for(unsigned int i=0;i<litBranchingRatios_Beam.size();i++){
-    double 	tmp 		= 0;
-    int	index_init 	= litBranchingRatios_Beam.at(i).GetInitialIndex();
-    int	index_final1	= litBranchingRatios_Beam.at(i).GetFinalIndex_1();
-    int	index_final2	= litBranchingRatios_Beam.at(i).GetFinalIndex_2();
-    double	BR		= litBranchingRatios_Beam.at(i).GetBranchingRatio();
-    double  calcBR		= rates_b.GetBranchingRatios()[index_final1][index_init] / rates_b.GetBranchingRatios()[index_final2][index_init];
-    if(fLikelihood){
-      double	sigma		= litBranchingRatios_Beam.at(i).GetUpUnc() * litBranchingRatios_Beam.at(i).GetDnUnc();
-      double	sigma_prime	= (litBranchingRatios_Beam.at(i).GetUpUnc() - litBranchingRatios_Beam.at(i).GetDnUnc());
-      chisq 			+= 0.5 * TMath::Power((calcBR - BR),2)/(sigma + sigma_prime * (calcBR - BR));
-    }
-    else{
-      if(calcBR > BR) {
-        tmp = (BR - calcBR) / litBranchingRatios_Beam.at(i).GetUpUnc();
-      }
-      else {
-        tmp = (BR - calcBR) / litBranchingRatios_Beam.at(i).GetDnUnc();
-      }
-      chisq += tmp * tmp;
-      br_chisq += tmp*tmp;      
-      if (verbosity>1) {
-        std::cout	<< std::setw(5) << std::left << index_init 
-                  << std::setw(5) << std::left << index_final1
-                  << std::setw(5) << std::left << index_final2
-                  << std::setw(13) << std::left << calcBR
-                  << std::setw(10) << std::left << BR
-                  << std::setw(10) << std::left << litBranchingRatios_Beam.at(i).GetUpUnc()
-                  << std::setw(13) << std::left << tmp*tmp ;
-        if (printct%2 == 1) {
-          std::cout << std::endl;
-        }
-        else {
-          std::cout << std::setw(7) << " "
-                    << std::setw(1) << "|"
-                    << std::setw(7) << " ";
-        }
-        printct += 1;
-      }
-    }
-    NDF++;
-    NDF_lit++;
   }
-  double mr_chisq = 0;
-  printct = 0;
-  if(litMixingRatios_Beam.size()>0 && verbosity>1)
+  chisq += CompareBranchingRatios(litBranchingRatios_Beam, rates_b, br_chisq, NDF_lit, NDF);
+  
+  if(litMixingRatios_Beam.size()>0 && verbosity>1) {
     std::cout	<< std::endl << "Delta (Beam):" 
               << std::endl;
-  for(unsigned int i=0;i<litMixingRatios_Beam.size();i++){
-    double 	tmp;
-    int 	index_init	= litMixingRatios_Beam.at(i).GetInitialIndex();
-    int	index_final	= litMixingRatios_Beam.at(i).GetFinalIndex();
-    double	delta		= litMixingRatios_Beam.at(i).GetMixingRatio();
-    double	calcDelta	= rates_b.GetMixingRatios()[index_final][index_init];
-    if(fLikelihood){
-      double	sigma		= litMixingRatios_Beam.at(i).GetUpUnc() * litMixingRatios_Beam.at(i).GetDnUnc();
-      double	sigma_prime	= (litMixingRatios_Beam.at(i).GetUpUnc() - litMixingRatios_Beam.at(i).GetDnUnc());
-      chisq 			+= 0.5 * TMath::Power((calcDelta - delta),2)/(sigma + sigma_prime * (calcDelta - delta));
-    }
-    else{
-      if(calcDelta > delta)
-        tmp = (delta - calcDelta) / litMixingRatios_Beam.at(i).GetUpUnc();
-      else
-        tmp = (delta - calcDelta) / litMixingRatios_Beam.at(i).GetDnUnc();
-      chisq += tmp * tmp;		
-      mr_chisq += tmp*tmp;
-      if (verbosity>1) {
-        std::cout	<< std::setw(5) << std::left << index_init 
-                  << std::setw(5) << std::left << index_final
-                  << std::setw(12) << std::left << calcDelta
-                  << std::setw(10) << std::left << delta
-                  << std::setw(10) << std::left << litMixingRatios_Beam.at(i).GetUpUnc()
-                  << std::setw(12) << std::left << tmp*tmp;
-        if (printct%2 == 1) {
-          std::cout << std::endl;
-        }
-        else {
-          std::cout << std::setw(7) << " "
-                    << std::setw(1) << "|"
-                    << std::setw(7) << " ";
-        }
-        printct += 1;
-
-      }
-    }
-    NDF++;
-    NDF_lit++;
   }
-  double me_chisq = 0;
-  printct = 0;
-  if(litMatrixElements_Beam.size()>0 && verbosity>1)
+  chisq += CompareMixingRatios(litMixingRatios_Beam, rates_b, mr_chisq, NDF_lit, NDF);
+
+  if(litMatrixElements_Beam.size()>0 && verbosity>1) {
     std::cout 	<< std::endl << "Matrix Elements (Beam)"
                 << std::endl;
-  for(unsigned int i=0;i<litMatrixElements_Beam.size();i++){
-    double tmp;
-    int	mult		= litMatrixElements_Beam.at(i).GetMultipolarity();
-    int 	index_init	= litMatrixElements_Beam.at(i).GetInitialIndex();
-    int	index_final	= litMatrixElements_Beam.at(i).GetFinalIndex();
-    double	ME		= litMatrixElements_Beam.at(i).GetMatrixElement();
-    double	calcME		= nucl_b.GetMatrixElements().at(mult)[index_init][index_final];
-    if(fLikelihood){
-      double	sigma		= litMatrixElements_Beam.at(i).GetUpUnc() * litMatrixElements_Beam.at(i).GetDnUnc();
-      double	sigma_prime	= (litMatrixElements_Beam.at(i).GetUpUnc() - litMatrixElements_Beam.at(i).GetDnUnc());
-      chisq 			+= 0.5 * TMath::Power((calcME - ME),2)/(sigma + sigma_prime * (calcME - ME));
-    }
-    else{
-      if (std::abs(litMatrixElements_Beam.at(i).GetSign()) > 0) {
-        if(calcME > ME) {
-          tmp = (ME - calcME) / litMatrixElements_Beam.at(i).GetUpUnc();
-        }
-        else {
-          tmp = (ME - calcME) / litMatrixElements_Beam.at(i).GetDnUnc();
-        }
-      }
-      else { //don't know sign of literature matrix element, compare absolute values
-        if(std::abs(calcME) > std::abs(ME)) {
-          tmp = (std::abs(ME) - std::abs(calcME)) / litMatrixElements_Beam.at(i).GetUpUnc();
-        }
-        else {
-          tmp = (std::abs(ME) - std::abs(calcME)) / litMatrixElements_Beam.at(i).GetDnUnc();
-        }
-      }
-        
-      chisq += tmp * tmp;		
-      me_chisq += tmp*tmp;
-      if (verbosity>1) {
-        std::cout	<< std::setw(5) << std::left << index_init 
-                  << std::setw(5) << std::left << index_final
-                  << std::setw(5) << std::left << mult
-                  << std::setw(14) << std::left << calcME
-                  << std::setw(10) << std::left << ME
-                  << std::setw(10) << std::left << litMatrixElements_Beam.at(i).GetUpUnc()
-                  << std::setw(14) << std::left << tmp*tmp;
-        if (printct%2 == 1) {
-          std::cout << std::endl;
-        }
-        else {
-          std::cout << std::setw(7) << " "
-                    << std::setw(1) << "|"
-                    << std::setw(7) << " ";
-        }
-        printct += 1;
+  }
+  chisq += CompareMatrixElements(litMatrixElements_Beam, nucl_b, me_chisq, NDF_lit, NDF);
 
-      }
-    }
-    NDF++;
-    NDF_lit++;
-  }
   // 	Now, compare with the literature for the target:
-  TransitionRates rates_t(&nucl_t);
-  for(unsigned int i=0;i<litLifetimes_Target.size();i++){
-    double 	tmp = 0;
-    int	index		= litLifetimes_Target.at(i).GetIndex();
-    double	lifetime	= litLifetimes_Target.at(i).GetLifetime();
-    double	calcLifetime	= rates_t.GetLifetimes()[index];
-    if(fLikelihood){
-      double	sigma		= litLifetimes_Target.at(i).GetUpUnc() * litLifetimes_Target.at(i).GetDnUnc();
-      double	sigma_prime	= (litLifetimes_Target.at(i).GetUpUnc() - litLifetimes_Target.at(i).GetDnUnc());
-      chisq 			+= 0.5 * TMath::Power((calcLifetime - lifetime),2)/(sigma + sigma_prime * (calcLifetime - lifetime));
-    }
-    else{
-      if(calcLifetime > lifetime)
-        tmp = (calcLifetime - lifetime) / litLifetimes_Target.at(i).GetUpUnc();
-      else
-        tmp = (calcLifetime - lifetime) / litLifetimes_Target.at(i).GetDnUnc();
-      chisq += tmp * tmp;
-      lifetime_chisq += tmp*tmp;
-    }
-    NDF++;
-    NDF_lit++;
+  if(litLifetimes_Target.size()>0 && verbosity>1) {
+    std::cout	<< std::endl << "Lifetimes (Target):" 
+              << std::endl;
   }
-  if(litBranchingRatios_Target.size()>0)
-    if (verbosity>1) {
-      std::cout	<< "BR (Target):" 
+  chisq += CompareLifetimes(litLifetimes_Target, rates_t, lifetime_chisq, NDF_lit, NDF);
+
+  if(litBranchingRatios_Target.size()>0 && verbosity>1) {
+    std::cout	<< std::endl << "BR (Target):" 
+              << std::endl;
+  }
+  chisq += CompareBranchingRatios(litBranchingRatios_Target, rates_t, br_chisq, NDF_lit, NDF);
+
+  if(litMixingRatios_Target.size()>0 && verbosity>1 ) {
+    std::cout	<< std::endl << "Delta (Target):" 
+              << std::endl;
+  }
+  chisq += CompareMixingRatios(litMixingRatios_Target, rates_t, mr_chisq, NDF_lit, NDF);
+  
+  if(litMatrixElements_Target.size()>0 && verbosity > 1) {
+    std::cout 	<< std::endl << "Matrix Elements (Target)"
                 << std::endl;
-    }
-  for(unsigned int i=0;i<litBranchingRatios_Target.size();i++){
-    double 	tmp 		= 0;
-    int	index_init 	= litBranchingRatios_Target.at(i).GetInitialIndex();
-    int	index_final1	= litBranchingRatios_Target.at(i).GetFinalIndex_1();
-    int	index_final2	= litBranchingRatios_Target.at(i).GetFinalIndex_2();
-    double	BR		= litBranchingRatios_Target.at(i).GetBranchingRatio();
-    double  calcBR		= rates_t.GetBranchingRatios()[index_final1][index_init] / rates_t.GetBranchingRatios()[index_final2][index_init];
-    if(fLikelihood){
-      double	sigma		= litBranchingRatios_Target.at(i).GetUpUnc() * litBranchingRatios_Target.at(i).GetDnUnc();
-      double	sigma_prime	= (litBranchingRatios_Target.at(i).GetUpUnc() - litBranchingRatios_Target.at(i).GetDnUnc());
-      chisq 			+= 0.5 * TMath::Power((calcBR - BR),2)/(sigma + sigma_prime * (calcBR - BR));
-    }
-    else{
-      if(calcBR > BR)
-        tmp = (BR - calcBR) / litBranchingRatios_Target.at(i).GetUpUnc();
-      else
-        tmp = (BR - calcBR) / litBranchingRatios_Target.at(i).GetDnUnc();
-      chisq += tmp * tmp;
-      br_chisq += tmp*tmp;
-      if (verbosity>1) {
-        std::cout	<< std::setw(10) << std::left << index_init 
-                  << std::setw(10) << std::left << index_final1
-                  << std::setw(10) << std::left << index_final2
-                  << std::setw(10) << std::left << calcBR
-                  << std::setw(10) << std::left << BR
-                  << std::setw(10) << std::left << litBranchingRatios_Target.at(i).GetUpUnc()
-                  << std::setw(10) << std::left << tmp*tmp 
-                  << std::endl;
-      }
-    }
-    NDF++;
-    NDF_lit++;
   }
-  if(litMixingRatios_Target.size()>0)
-    if (verbosity>1) {
-      std::cout	<< "Delta (Target):" 
-                << std::endl;
-    }
-  for(unsigned int i=0;i<litMixingRatios_Target.size();i++){
-    double tmp;
-    int 	index_init	= litMixingRatios_Target.at(i).GetInitialIndex();
-    int	index_final	= litMixingRatios_Target.at(i).GetFinalIndex();
-    double	delta		= litMixingRatios_Target.at(i).GetMixingRatio();
-    double	calcDelta	= rates_t.GetMixingRatios()[index_final][index_init];
-    if(fLikelihood){
-      double	sigma		= litMixingRatios_Target.at(i).GetUpUnc() * litMixingRatios_Target.at(i).GetDnUnc();
-      double	sigma_prime	= (litMixingRatios_Target.at(i).GetUpUnc() - litMixingRatios_Target.at(i).GetDnUnc());
-      chisq 			+= 0.5 * TMath::Power((calcDelta - delta),2)/(sigma + sigma_prime * (calcDelta - delta));
-    }
-    else{
-      if(calcDelta > delta)
-        tmp = (delta - calcDelta) / litMixingRatios_Target.at(i).GetUpUnc();
-      else
-        tmp = (delta - calcDelta) / litMixingRatios_Target.at(i).GetDnUnc();
-      chisq += tmp * tmp;		
-      mr_chisq += tmp*tmp;
-      if (verbosity>1) {
-        std::cout	<< std::setw(10) << std::left << index_init 
-                  << std::setw(10) << std::left << index_final
-                  << std::setw(10) << std::left << calcDelta
-                  << std::setw(10) << std::left << delta
-                  << std::setw(10) << std::left << litMixingRatios_Target.at(i).GetUpUnc()
-                  << std::setw(10) << std::left << tmp*tmp 
-                  << std::endl;
-      }
-    }
-    NDF++;
-    NDF_lit++;
-  }
-  if(litMatrixElements_Target.size()>0)
-    if (verbosity>1) {
-      std::cout 	<< "Matrix Elements (Target)"
-                  << std::endl;
-    }
-  for(unsigned int i=0;i<litMatrixElements_Target.size();i++){
-    double tmp;
-    int	mult		= litMatrixElements_Target.at(i).GetMultipolarity();
-    int 	index_init	= litMatrixElements_Target.at(i).GetInitialIndex();
-    int	index_final	= litMatrixElements_Target.at(i).GetFinalIndex();
-    double	ME		= litMatrixElements_Target.at(i).GetMatrixElement();
-    double	calcME		= nucl_t.GetMatrixElements().at(mult)[index_init][index_final];
-    if(fLikelihood){
-      double	sigma		= litMatrixElements_Target.at(i).GetUpUnc() * litMatrixElements_Target.at(i).GetDnUnc();
-      double	sigma_prime	= (litMatrixElements_Target.at(i).GetUpUnc() - litMatrixElements_Target.at(i).GetDnUnc());
-      chisq 			+= 0.5 * TMath::Power((calcME - ME),2)/(sigma + sigma_prime * (calcME - ME));
-    }
-    else{
-      if (std::abs(litMatrixElements_Target.at(i).GetSign()) > 0) {
-        if(calcME > ME) {
-          tmp = (ME - calcME) / litMatrixElements_Target.at(i).GetUpUnc();
-        }
-        else {
-          tmp = (ME - calcME) / litMatrixElements_Target.at(i).GetDnUnc();
-        }
-      }
-      else { //don't know sign of literature matrix element, compare absolute values
-        if(std::abs(calcME) > std::abs(ME)) {
-          tmp = (std::abs(ME) - std::abs(calcME)) / litMatrixElements_Target.at(i).GetUpUnc();
-        }
-        else {
-          tmp = (std::abs(ME) - std::abs(calcME)) / litMatrixElements_Target.at(i).GetDnUnc();
-        }
-      }
-      chisq += tmp * tmp;		
-      me_chisq += tmp*tmp;
-      if (verbosity>1) {
-        std::cout	<< std::setw(10) << std::left << index_init 
-                  << std::setw(10) << std::left << index_final
-                  << std::setw(10) << std::left << mult
-                  << std::setw(14) << std::left << calcME
-                  << std::setw(14) << std::left << ME
-                  << std::setw(14) << std::left << litMatrixElements_Target.at(i).GetUpUnc()
-                  << std::setw(14) << std::left << tmp*tmp 
-                  << std::endl;
-      }
-    }
-    NDF++;
-    NDF_lit++;
-  }
+  chisq += CompareMatrixElements(litMatrixElements_Target, nucl_t, me_chisq, NDF_lit, NDF);
+  std::cout << std::flush << std::endl;
+
   double litchisq = chisq;
   //	COULEX AND STUFF:
 
@@ -497,47 +626,6 @@ double GOSIASimMinFCN::operator()(const double* par){
 
   if(verbosity>1)
     std::cout << std::endl;
-
-  //	Everything needs printing for both beam and target...
-  if((verbosity>1) && !fLikelihood){
-    std::cout 	<< std::setw( 7) << std::left << "Beam:"
-                << std::endl;
-    std::cout 	<< std::setw( 4) << std::left << " ";
-    std::cout	<< std::setw(10) << std::left << "Scaling:";
-    //		for(unsigned int t=0;t<exptData_Beam.at(exptData_Beam.size()-1).GetData().size();t++){
-    std::cout 	<< std::setw( 6) << std::left << "Init:"
-                << std::setw( 6) << std::left << "Finl:"
-                << std::setw(14) << std::left << "Calc:"
-                << std::setw(14) << std::left << "Expt:"
-                << std::setw(14) << std::left << "Err:"
-                << std::setw(14) << std::left << "C/E:"
-                << std::setw(14) << std::left << "Chisq:"
-                << std::setw(20) << std::left << " "
-                << std::setw( 6) << std::left << "Init:"
-                << std::setw( 6) << std::left << "Finl:"
-                << std::setw(14) << std::left << "Calc:"
-                << std::setw(14) << std::left << "Expt:"
-                << std::setw(14) << std::left << "Err:"
-                << std::setw(14) << std::left << "C/E:"
-                << std::setw(14) << std::left << "Chisq:";      
-    //		}
-    std::cout 	<< std::endl;
-  }
-  else if(verbosity>1){
-    std::cout 	<< std::setw( 7) << std::left << "Beam:"
-                << std::endl;
-    std::cout 	<< std::setw( 4) << std::left << " ";
-    std::cout	<< std::setw(10) << std::left << "Scaling:";
-    for(unsigned int t=0;t<exptData_Beam.at(exptData_Beam.size()-1).GetData().size();t++){
-      std::cout	<< std::setw( 6) << std::left << "Init:"
-                << std::setw( 6) << std::left << "Finl:"
-                << std::setw(10) << std::left << "Calc:"
-                << std::setw(10) << std::left << "Expt:"
-                << std::setw(10) << std::left << "Calc/Expt:"
-                << std::setw(12) << std::left << "-Ln(L) cont.:";
-    }
-    std::cout 	<< std::endl;
-  }
 
   std::vector<double>	scaling;
   scaling.resize(exptData_Beam.size());
@@ -644,302 +732,34 @@ double GOSIASimMinFCN::operator()(const double* par){
 
   }
 
+  
   double			beamchisq = 0;
-  std::vector<int>	beamdata;
   std::vector<double>	beamexptchisq;
-  int			counter = 0;
-
-  for(unsigned int i=0;i<exptData_Beam.size();i++){
-    double	exptchisq	= 0;
-    if(expt_weights.at(i) == 0) 
-      continue;
-    if(verbosity>1){
-      std::cout	<< std::setw(4) << std::left << i+1;
-      std::cout	<< std::setw(10) << std::left << scaling.at(i);
-    }
-    for(unsigned int t=0;t<exptData_Beam.at(i).GetData().size();++t){
-      double 	tmp 		= 0;
-      int	index_init 	= exptData_Beam.at(i).GetData().at(t).GetInitialIndex();
-      int	index_final 	= exptData_Beam.at(i).GetData().at(t).GetFinalIndex();
-      double 	calcCounts 	= scaling.at(i) * EffectiveCrossSection_Beam.at(i)[index_final][index_init];
-      double 	exptCounts 	= exptData_Beam.at(i).GetData().at(t).GetCounts();
-      double	sigma		= exptData_Beam.at(i).GetData().at(t).GetUpUnc() * exptData_Beam.at(i).GetData().at(t).GetDnUnc();
-      double	sigma_prime	= (exptData_Beam.at(i).GetData().at(t).GetUpUnc() - exptData_Beam.at(i).GetData().at(t).GetDnUnc());
-      sigma			/= expt_weights.at(i);
-      sigma_prime		/= expt_weights.at(i);
-      if(exptCounts > 0 && sigma > 0){
-        if(true){// && ((index_init == 1 && index_final ==  0) || (index_init == 7 && index_final == 4))){
-          if (verbosity>1) {
-            if(fLikelihood){
-              std::cout 	<< std::setw( 6) << std::left << index_init 
-                          << std::setw( 6) << std::left << index_final 
-                          << std::setw(14) << std::left << calcCounts 
-                          << std::setw(14) << std::left << exptCounts 
-                          << std::setw(14) << std::left << calcCounts/exptCounts
-                          << std::setw(14) << std::left << 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts)) << std::endl << "              ";
-            }
-            else{
-              std::cout 	<< std::setw( 6) << std::left << index_init 
-                          << std::setw( 6) << std::left << index_final 
-                          << std::setw(14) << std::left << calcCounts 
-                          << std::setw(14) << std::left << exptCounts 
-                          << std::setw(14) << std::left << exptData_Beam.at(i).GetData().at(t).GetUpUnc()
-                          << std::setw(14) << std::left << calcCounts/exptCounts
-                          << std::setw(14) << std::left << TMath::Power((calcCounts - exptCounts)/exptData_Beam.at(i).GetData().at(t).GetUpUnc(),2);
-              if (t%2 == 0) {
-                std::cout << std::setw(20) << std::left << " ";
-                if (t==exptData_Beam.at(i).GetData().size()-1) { std::cout << std::endl; }
-              }
-              else { std::cout << std::endl << std::setw(14) << std::left << " "; }
-            }
-          }
-        }
-        if(fLikelihood){
-          chisq		+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-          beamchisq	+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-        }
-        else{
-          if(calcCounts > exptCounts)
-            tmp 		= (calcCounts - exptCounts) / exptData_Beam.at(i).GetData().at(t).GetUpUnc();
-          else
-            tmp 		= (calcCounts - exptCounts) / exptData_Beam.at(i).GetData().at(t).GetDnUnc();
-          chisq		+= tmp * tmp;
-          beamchisq	+= tmp * tmp;
-          exptchisq	+= tmp * tmp;
-        }
-        NDF++;
-        NDF_beam++;
-      }
-    }
-    for(unsigned int t=0;t<exptData_Beam.at(i).GetDoublet().size();++t){
-      double 	tmp 		= 0;
-      int	index_init1 	= exptData_Beam.at(i).GetDoublet().at(t).GetInitialIndex1();
-      int	index_final1 	= exptData_Beam.at(i).GetDoublet().at(t).GetFinalIndex1();
-      int	index_init2 	= exptData_Beam.at(i).GetDoublet().at(t).GetInitialIndex2();
-      int	index_final2 	= exptData_Beam.at(i).GetDoublet().at(t).GetFinalIndex2();
-      double 	calcCounts 	= scaling.at(i) * (EffectiveCrossSection_Beam.at(i)[index_final1][index_init1] + EffectiveCrossSection_Beam.at(i)[index_final2][index_init2]);
-      double 	exptCounts 	= exptData_Beam.at(i).GetDoublet().at(t).GetCounts();
-      double	sigma		= exptData_Beam.at(i).GetDoublet().at(t).GetUpUnc() * exptData_Beam.at(i).GetDoublet().at(t).GetDnUnc();
-      double	sigma_prime	= (exptData_Beam.at(i).GetDoublet().at(t).GetUpUnc() - exptData_Beam.at(i).GetDoublet().at(t).GetDnUnc());
-      sigma			/= expt_weights.at(i);
-      sigma_prime		/= expt_weights.at(i);
-      if(calcCounts > 0 && sigma > 0){
-        if(true){// && ((index_init == 1 && index_final ==  0) || (index_init == 7 && index_final == 4))){
-          if (verbosity>1) {
-            if(fLikelihood){
-              std::cout 	<< std::setw( 6) << std::left << index_init1*100 + index_init2
-                          << std::setw( 6) << std::left << index_final1*100 + index_final2
-                          << std::setw(10) << std::left << calcCounts 
-                          << std::setw(10) << std::left << exptCounts 
-                          << std::setw(10) << std::left << calcCounts/exptCounts
-                          << std::setw(12) << std::left << 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-            }
-            else{
-              std::cout 	<< std::setw( 6) << std::left << index_init1*100 + index_init2 
-                          << std::setw( 6) << std::left << index_final1*100 + index_final2
-                          << std::setw(10) << std::left << calcCounts 
-                          << std::setw(10) << std::left << exptCounts 
-                          << std::setw(10) << std::left << exptData_Beam.at(i).GetDoublet().at(t).GetUpUnc()
-                          << std::setw(10) << std::left << calcCounts/exptCounts
-                          << std::setw(12) << std::left << TMath::Power((calcCounts - exptCounts)/exptData_Beam.at(i).GetData().at(t).GetUpUnc(),2);
-            }
-          }
-        }
-        if(fLikelihood){
-          chisq		+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-          beamchisq	+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-        }
-        else{
-          if(calcCounts > exptCounts)
-            tmp 		= (calcCounts - exptCounts) / exptData_Beam.at(i).GetData().at(t).GetUpUnc();
-          else
-            tmp 		= (calcCounts - exptCounts) / exptData_Beam.at(i).GetData().at(t).GetDnUnc();
-          chisq		+= tmp * tmp;
-          beamchisq	+= tmp * tmp;
-          exptchisq	+= tmp * tmp;
-        }
-        NDF++;
-        NDF_beam++;
-      }
-    }
-    beamdata.push_back(i);
-    beamexptchisq.push_back(exptchisq);
-    if(verbosity>1)
-      std::cout << std::endl;
-    counter++;
-  }
-  if(verbosity>1 && !fLikelihood){
-    std::cout 	<< std::setw( 7) << std::left << "Target:"
-                << std::endl;
-    std::cout 	<< std::setw( 4) << std::left << "";
-    std::cout	<< std::setw(10) << std::left << "Scaling:";
-    if(exptData_Target.size() > 0){
-      for(unsigned int t=0;t<exptData_Target.at(exptData_Target.size()-1).GetData().size();t++){
-        std::cout	<< std::setw( 6) << std::left << "Init:"
-                  << std::setw( 6) << std::left << "Finl:"
-                  << std::setw(10) << std::left << "Calc:"
-                  << std::setw(10) << std::left << "Expt:"
-                  << std::setw(10) << std::left << "Err:"
-                  << std::setw(10) << std::left << "C/E:"
-                  << std::setw(12) << std::left << "Chisq:";
-      }
-      std::cout 	<< std::endl;
-    }
-    std::cout 	<< std::endl;
-  }
-  else if(verbosity>1){
-    std::cout 	<< std::setw( 7) << std::left << "Target:"
-                << std::endl;
-    std::cout 	<< std::setw( 4) << std::left << " ";
-    std::cout	<< std::setw(10) << std::left << "Scaling:";
-    if(exptData_Target.size() > 0){
-      for(unsigned int t=0;t<exptData_Target.at(exptData_Target.size()-1).GetData().size();t++){
-        std::cout	<< std::setw( 6) << std::left << "Init:"
-                  << std::setw( 6) << std::left << "Finl:"
-                  << std::setw(10) << std::left << "Calc:"
-                  << std::setw(10) << std::left << "Expt:"
-                  << std::setw(10) << std::left << "Calc/Expt:"
-                  << std::setw(12) << std::left << "-Ln(L) cont.:";
-      }
-      std::cout 	<< std::endl;
-    }
-  }
-
   double			targchisq = 0;
-  std::vector<int>	targdata;
   std::vector<double>	targexptchisq;
-  counter = 0;
 
-  for(unsigned int i=0;i<exptData_Target.size();i++){
-    double	exptchisq	= 0;
-    if(expt_weights.at(i) == 0.)
-      continue;
-    if(verbosity>1){
-      std::cout	<< std::setw(4) << std::left << i+1;
-      std::cout	<< std::setw(10) << std::left << scaling.at(i);
-    }
-    for(unsigned int t=0;t<exptData_Target.at(i).GetData().size();++t){
-      double 	tmp 		= 0;
-      int	index_init 	= exptData_Target.at(i).GetData().at(t).GetInitialIndex();
-      int	index_final 	= exptData_Target.at(i).GetData().at(t).GetFinalIndex();
-      double 	calcCounts 	= scaling.at(i) * EffectiveCrossSection_Target.at(i)[index_final][index_init];
-      double 	exptCounts 	= exptData_Target.at(i).GetData().at(t).GetCounts();
-      double	sigma		= exptData_Target.at(i).GetData().at(t).GetUpUnc() * exptData_Target.at(i).GetData().at(t).GetDnUnc();
-      double	sigma_prime	= (exptData_Target.at(i).GetData().at(t).GetUpUnc() - exptData_Target.at(i).GetData().at(t).GetDnUnc());	
-      sigma			/= expt_weights.at(i);
-      sigma_prime		/= expt_weights.at(i); 
-      if(calcCounts > 0 && sigma > 0){
-        if(true){
-          if (verbosity>1) {
-            if(fLikelihood){
-              std::cout 	<< std::setw( 6) << std::left << index_init 
-                          << std::setw( 6) << std::left << index_final 
-                          << std::setw(10) << std::left << calcCounts 
-                          << std::setw(10) << std::left << exptCounts 
-                          << std::setw(10) << std::left << calcCounts/exptCounts
-                          << std::setw(12) << std::left << 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-            }
-            else{
-              std::cout 	<< std::setw( 6) << std::left << index_init 
-                          << std::setw( 6) << std::left << index_final 
-                          << std::setw(10) << std::left << calcCounts 
-                          << std::setw(10) << std::left << exptCounts 
-                          << std::setw(10) << std::left << exptData_Target.at(i).GetData().at(t).GetUpUnc() 
-                          << std::setw(10) << std::left << calcCounts/exptCounts
-                          << std::setw(12) << std::left << TMath::Power((calcCounts - exptCounts)/exptData_Target.at(i).GetData().at(t).GetUpUnc(),2);
-            }
-          }
-        }
-        if(fLikelihood){
-          chisq		+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-          targchisq	+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-        }
-        else{
-          if(calcCounts > exptCounts)
-            tmp 		= (calcCounts - exptCounts) / exptData_Target.at(i).GetData().at(t).GetUpUnc();
-          else
-            tmp 		= (calcCounts - exptCounts) / exptData_Target.at(i).GetData().at(t).GetDnUnc();
-          chisq		+= tmp * tmp;
-          targchisq 	+= tmp * tmp;
-          exptchisq	+= tmp * tmp;
-        }
-        NDF++;
-        NDF_targ++;
-      }
-    }
-    for(unsigned int t=0;t<exptData_Target.at(i).GetDoublet().size();++t){
-      double 	tmp 		= 0;
-      int	index_init1 	= exptData_Target.at(i).GetDoublet().at(t).GetInitialIndex1();
-      int	index_final1 	= exptData_Target.at(i).GetDoublet().at(t).GetFinalIndex1();
-      int	index_init2 	= exptData_Target.at(i).GetDoublet().at(t).GetInitialIndex2();
-      int	index_final2 	= exptData_Target.at(i).GetDoublet().at(t).GetFinalIndex2();
-      double 	calcCounts 	= scaling.at(i) * (EffectiveCrossSection_Target.at(i)[index_final1][index_init1] + EffectiveCrossSection_Target.at(i)[index_final2][index_init2]);
-      double 	exptCounts 	= exptData_Target.at(i).GetDoublet().at(t).GetCounts();
-      double	sigma		= exptData_Target.at(i).GetDoublet().at(t).GetUpUnc() * exptData_Target.at(i).GetDoublet().at(t).GetDnUnc();
-      double	sigma_prime	= (exptData_Target.at(i).GetDoublet().at(t).GetUpUnc() - exptData_Target.at(i).GetDoublet().at(t).GetDnUnc());
-      sigma			/= expt_weights.at(i);
-      sigma_prime		/= expt_weights.at(i);
-      if(calcCounts > 0 && sigma > 0){
-        if(true){// && ((index_init == 1 && index_final ==  0) || (index_init == 7 && index_final == 4))){
-          if (verbosity>1) {
-            if(fLikelihood){
-              std::cout 	<< std::setw( 6) << std::left << index_init1*100 + index_init2
-                          << std::setw( 6) << std::left << index_final1*100 + index_final2
-                          << std::setw(10) << std::left << calcCounts 
-                          << std::setw(10) << std::left << exptCounts 
-                          << std::setw(10) << std::left << calcCounts/exptCounts
-                          << std::setw(12) << std::left << 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-            }
-            else{
-              std::cout 	<< std::setw( 6) << std::left << index_init1*100 + index_init2 
-                          << std::setw( 6) << std::left << index_final1*100 + index_final2
-                          << std::setw(10) << std::left << calcCounts 
-                          << std::setw(10) << std::left << exptCounts 
-                          << std::setw(10) << std::left << exptData_Target.at(i).GetDoublet().at(t).GetUpUnc()
-                          << std::setw(10) << std::left << calcCounts/exptCounts
-                          << std::setw(12) << std::left << TMath::Power((calcCounts - exptCounts)/exptData_Target.at(i).GetData().at(t).GetUpUnc(),2);
-            }
-          }
-        }
-        if(fLikelihood){
-          chisq		+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-          targchisq	+= 0.5 * TMath::Power((exptCounts - calcCounts),2)/(sigma + sigma_prime * (exptCounts - calcCounts));
-        }
-        else{
-          if(calcCounts > exptCounts)
-            tmp 		= (calcCounts - exptCounts) / exptData_Target.at(i).GetData().at(t).GetUpUnc();
-          else
-            tmp 		= (calcCounts - exptCounts) / exptData_Target.at(i).GetData().at(t).GetDnUnc();
-          chisq		+= tmp * tmp;
-          beamchisq	+= tmp * tmp;
-          targchisq	+= tmp * tmp;
-        }
-        NDF++;
-        NDF_targ++;
-      }
-    }
-    targdata.push_back(i);
-    targexptchisq.push_back(exptchisq);
-    if(verbosity>1)
-      std::cout << std::endl;
-  }
+  if (verbosity > 1) { PrintYieldHeader(0); }
+  chisq += CompareYields(exptData_Beam, EffectiveCrossSection_Beam, scaling, beamexptchisq, beamchisq, NDF_beam, NDF);
+  
+  if (verbosity > 1) { PrintYieldHeader(1); }
+  chisq += CompareYields(exptData_Target, EffectiveCrossSection_Target, scaling, targexptchisq, targchisq, NDF_targ, NDF);
 
   if(verbosity>1){
     std::cout	<< std::setw(16) << std::left << "Beam expt.:";
-    for(size_t i=0;i<beamdata.size();i++)
-      std::cout << std::setw(8) << std::left << beamdata.at(i);
+    for(size_t i=0;i<beamexptchisq.size();i++)
+      std::cout << std::setw(10) << std::left << i;
     std::cout	<< std::endl;
     std::cout	<< std::setw(16) << std::left << "Chi-squared:";
     for(size_t i=0;i<beamexptchisq.size();i++)
-      std::cout << std::setw(8) << std::left << std::setprecision(3) << beamexptchisq.at(i);
+      std::cout << std::setw(10) << std::left << std::setprecision(3) << beamexptchisq.at(i);
     std::cout	<< std::endl;
     std::cout	<< std::setw(16) << std::left << "Target expt.:";
-    for(size_t i=0;i<targdata.size();i++)
-      std::cout << std::setw(8) << std::left << targdata.at(i);
+    for(size_t i=0;i<targexptchisq.size();i++)
+      std::cout << std::setw(10) << std::left << i;
     std::cout	<< std::endl;
     std::cout	<< std::setw(16) << std::left << "Chi-squared:";
     for(size_t i=0;i<targexptchisq.size();i++)
-      std::cout << std::setw(8) << std::left << std::setprecision(3) << targexptchisq.at(i);
+      std::cout << std::setw(10) << std::left << std::setprecision(3) << targexptchisq.at(i);
     std::cout	<< std::endl;
   }
 
