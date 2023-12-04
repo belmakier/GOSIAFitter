@@ -1556,6 +1556,11 @@ void GOSIASimFitter::CalcBeamCorrectionFactors() {
            intyields,
            0);
 
+  if (ptyields.nexp != intyields.nexp) {
+    std::cerr << "Severe error! GOSIA outputs from integral and point yield have different numbers of experiments. There may be an error in one or both of the GOSIA input files" << std::endl;
+    exit(1);
+  }
+  
   GOSIAReader gosiaReader_point(&fNucleus_Beam, ptyields);
   GOSIAReader gosiaReader_inti(&fNucleus_Beam, intyields);
 
@@ -1601,6 +1606,10 @@ void GOSIASimFitter::CalcTargetCorrectionFactors() {
            intyields,
            0);
 
+  if (ptyields.nexp != intyields.nexp) {
+    std::cerr << "Severe error! GOSIA outputs from integral and point yield have different numbers of experiments. There may be an error in one or both of the GOSIA input files" << std::endl;
+    exit(1);
+  }
   GOSIAReader gosiaReader_point(&fNucleus_Target, ptyields);
   GOSIAReader gosiaReader_inti(&fNucleus_Target, intyields);
 

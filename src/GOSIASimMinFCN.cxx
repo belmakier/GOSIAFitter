@@ -571,6 +571,7 @@ double GOSIASimMinFCN::operator()(const double* par){
   int verb = 0;
   Gosia(0,verb);
   Gosia(1,verb);
+
   //RunGosia(beam_inputfile, workingDir, all_detectors, beam_me, beam_out, verbosity);
   //RunGosia(target_inputfile, workingDir, all_detectors, target_me, target_out, verbosity);
 

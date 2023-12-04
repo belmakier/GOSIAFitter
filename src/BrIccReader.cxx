@@ -41,7 +41,10 @@ double BrIccReader::GetTotalCC(int Z, double egamma, int mult) { //note that thi
   for (int i=0; i<37; ++i) {
     eshell rec;
     fread(&rec, 32, 1, idxfile);
+    if ((int)rec.exist > 0) { rec.exist = true; }
+    else { rec.exist = false; }
     shell.push_back(rec);
+    rec.print();
   }
 
   if (egamma < 1100) { 
@@ -118,6 +121,8 @@ double BrIccReader::GetTotalOmg(int Z, double egamma) { //Gets Omega for E0 tran
   for (int i=0; i<41; ++i) {
     eshell rec;
     fread(&rec, 32, 1, idxfile);
+    if ((int)rec.exist > 0) { rec.exist = true; }
+    else { rec.exist = false; }
     shell.push_back(rec);
   }
 
