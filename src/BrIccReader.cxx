@@ -44,7 +44,6 @@ double BrIccReader::GetTotalCC(int Z, double egamma, int mult) { //note that thi
     if ((int)rec.exist > 0) { rec.exist = true; }
     else { rec.exist = false; }
     shell.push_back(rec);
-    rec.print();
   }
 
   if (egamma < 1100) { 

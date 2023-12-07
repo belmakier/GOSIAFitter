@@ -81,6 +81,14 @@ struct gdet {
 struct input_file {
   int nlines;
   char lines[1000][INPUTFILE_LINELEN];
+
+  input_file() { 
+    for (int i=0; i<1000; ++i) {
+      for (int j=0; j<INPUTFILE_LINELEN; ++j) {
+        lines[i][j] = (char)0;
+      }
+    }
+  }
 };
 
 extern "C" {

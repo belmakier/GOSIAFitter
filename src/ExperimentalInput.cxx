@@ -101,3 +101,17 @@ void ExptData::Print() const {
 			<< std::setw(10) << DnUncertainty 
 			<< std::endl; 
 }
+
+TMatrixD ExperimentData::GetEffectiveCrossSection(const TMatrixD &correctionFactors, int dim) const {
+  TMatrixD tmpMat;
+  tmpMat.ResizeTo(dim, dim);
+  size_t nRows = GetData().size();
+  for (size_t j=0; j<nRows; j++) {
+    int init = GetData().at(j).GetInitialIndex();
+    int fina = GetData().at(j).GetFinalIndex();
+    double counts = GetData().at(j).GetCounts();
+    tmpMat[fina][init] = counts * correctionFactors[init][fina];
+    tmpMat[init][fina] = counts * correctionFactors[init][fina];
+  }
+  return tmpMat;
+}

@@ -304,7 +304,10 @@ class GOSIASimFitter {
 		std::vector<int>	GetTargetMappingFinal()			const	{ return targetMapping_f;		}
 		std::vector<int>	GetTargetMappingLambda()		const	{ return targetMapping_l;		}
 
-    void WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> norms);
+  void WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> norms);
+  void WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> norms, std::vector<double> &scaling, 
+                        std::vector<TMatrixD> &EffectiveCrossSection, std::vector<TMatrixD> &correctionFactors,
+                        std::vector<ExperimentData> &exptData, std::string species );
   
   void WriteBeamFittingParameters(std::string outfile);
   void WriteBeamFittingParameters(std::ostream &outstream);

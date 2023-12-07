@@ -5,6 +5,9 @@
 #include <iomanip>
 #include <vector>
 
+#include <TMatrix.h>
+#include <TMatrixD.h>
+
 class ExptDoublet  {
 
 	public:
@@ -199,6 +202,7 @@ class ExperimentData{
 		double				GetThetaCM()		const			{ return thetaCM;					}	/*!< Return theta CM */
 
 		void				Print()			const;	/*!< Print all experimental data */
+  TMatrixD GetEffectiveCrossSection(const TMatrixD &correctionFactors, int dim) const;
 
 	private:
 		std::vector<ExptData>		Data;		/*!< Vector of experimental yields in ExptData objects */

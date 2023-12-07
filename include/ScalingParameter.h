@@ -4,6 +4,10 @@
 #include <vector>
 #include <iostream>
 
+#include "ExperimentalInput.h"
+
+#include <TMatrixD.h>
+
 ///
 ///	\class ScalingParameter
 ///
@@ -48,8 +52,13 @@ class ScalingParameter{
 										return -1;
 									}
 								}	/*!< Get the experiment number for index i */
+  void CompareData(const ExperimentData &exptData, const TMatrixD &EffectiveCrossSection, const float &weight,
+                   std::vector<double> &sc_expt, std::vector<double> &sc_expt_unc, std::vector<double> &sc_calc);
 
-
+  void Fit(const std::vector<ExperimentData> &exptData_Beam, const std::vector<TMatrixD> &EffectiveCrossSection_Beam,
+           const std::vector<ExperimentData> &exptData_Target, const std::vector<TMatrixD> &EffectiveCrossSection_Target,
+           const std::vector<float> &weights, std::vector<double> &scaling);
+  
 	private:
 		std::vector<int>		experimentNumber;
 		double				scaling;

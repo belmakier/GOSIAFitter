@@ -120,10 +120,10 @@ double GOSIASimMinFCN::CompareBranchingRatios(std::vector<LitBranchingRatio> &li
 
 double GOSIASimMinFCN::CompareMixingRatios(std::vector<LitMixingRatio> &litMixingRatios, TransitionRates &rates, double &chisq_mixingratio, int &NDF_lit, int &NDF) {
   int printct = 0;
-  double chisq;
+  double chisq = 0;
 
   for(unsigned int i=0;i<litMixingRatios.size();i++){
-    double 	tmp;
+    double 	tmp = 0;
     int 	index_init	= litMixingRatios.at(i).GetInitialIndex();
     int	index_final	= litMixingRatios.at(i).GetFinalIndex();
     double	delta		= litMixingRatios.at(i).GetMixingRatio();
@@ -169,7 +169,7 @@ double GOSIASimMinFCN::CompareMatrixElements(std::vector<LitMatrixElement> &litM
   double chisq = 0;
   int printct = 0;
   for(unsigned int i=0;i<litMatrixElements.size();i++){
-    double tmp;
+    double tmp = 0;
     int	mult		= litMatrixElements.at(i).GetMultipolarity();
     int 	index_init	= litMatrixElements.at(i).GetInitialIndex();
     int	index_final	= litMatrixElements.at(i).GetFinalIndex();
@@ -583,158 +583,29 @@ double GOSIASimMinFCN::operator()(const double* par){
   EffectiveCrossSection_Beam.clear();	
   EffectiveCrossSection_Target.clear();	
 
+  int dim_b = rates_b.GetBranchingRatios().GetNrows();
+  int dim_t = rates_t.GetBranchingRatios().GetNrows();
+
+  //do the correction from point to integral yields
   for(size_t i=0; i<beamCalc.size(); i++){
-    TMatrixD	tmpMat;
-    tmpMat.ResizeTo(rates_b.GetBranchingRatios().GetNrows(),rates_b.GetBranchingRatios().GetNcols());
-    size_t	nRows = beamCalc.at(i).GetData().size();
-    for(size_t j=0; j<nRows; j++){
-      int	init		= beamCalc.at(i).GetData().at(j).GetInitialIndex();
-      int	fina		= beamCalc.at(i).GetData().at(j).GetFinalIndex();
-      double 	counts 		= beamCalc.at(i).GetData().at(j).GetCounts();
-      if(false && i==0){
-        std::cout	<< std::setw( 6) << std::left << init
-                  << std::setw( 6) << std::left << fina
-                  << std::setw(12) << std::left << counts	
-                  << std::setw(12) << std::left << correctionFactors_Beam.at(i)[init][fina]
-                  << std::setw(12) << std::left << correctionFactors_Beam.at(i)[init][fina] * counts
-                  << std::endl;
-      }
-      tmpMat[fina][init]	= counts * correctionFactors_Beam.at(i)[init][fina];
-      tmpMat[init][fina]	= counts * correctionFactors_Beam.at(i)[init][fina];
-    }
-    EffectiveCrossSection_Beam.push_back(tmpMat);
-  }
+    EffectiveCrossSection_Beam.push_back(beamCalc.at(i).GetEffectiveCrossSection(correctionFactors_Beam.at(i), dim_b));
+  };
 
   for(size_t i=0; i<targetCalc.size(); i++){
-    TMatrixD	tmpMat;
-    tmpMat.ResizeTo(rates_t.GetBranchingRatios().GetNrows(),rates_t.GetBranchingRatios().GetNcols());
-    size_t	nRows = targetCalc.at(i).GetData().size();
-    for(size_t j=0; j<nRows; j++){
-      int	init		= targetCalc.at(i).GetData().at(j).GetInitialIndex();
-      int	fina		= targetCalc.at(i).GetData().at(j).GetFinalIndex();
-      double 	counts 		= targetCalc.at(i).GetData().at(j).GetCounts();
-      if(false && i==0){
-        std::cout	<< std::setw( 6) << std::left << init
-                  << std::setw( 6) << std::left << fina
-                  << std::setw(12) << std::left << counts	
-                  << std::setw(12) << std::left << correctionFactors_Target.at(i)[init][fina]
-                  << std::setw(12) << std::left << correctionFactors_Target.at(i)[init][fina] * counts
-                  << std::endl;
-      }
-      tmpMat[fina][init]	= counts * correctionFactors_Target.at(i)[init][fina];
-      tmpMat[init][fina]	= counts * correctionFactors_Target.at(i)[init][fina];
-    }
-    EffectiveCrossSection_Target.push_back(tmpMat);
+    EffectiveCrossSection_Target.push_back(targetCalc.at(i).GetEffectiveCrossSection(correctionFactors_Target.at(i), dim_t));
   }
 
   if(verbosity>1)
     std::cout << std::endl;
 
+  //fit optimal scaling factors
   std::vector<double>	scaling;
   scaling.resize(exptData_Beam.size());
   for(size_t s=0;s<scalingParameters.size();s++){
-    std::vector<double>	sc_expt;
-    std::vector<double>	sc_expt_unc;
-    std::vector<double>	sc_calc;
-    for(size_t ss=0;ss<scalingParameters.at(s).GetExperimentNumbers().size();ss++){
-      size_t i = scalingParameters.at(s).GetExperimentNumbers().at(ss);
-      if(expt_weights.at(i) == 0) 
-        continue;
-      if(i < exptData_Beam.size()){
-        for(size_t t=0;t<exptData_Beam.at(i).GetData().size();++t){
-          int	index_init 	= exptData_Beam.at(i).GetData().at(t).GetInitialIndex();
-          int	index_final 	= exptData_Beam.at(i).GetData().at(t).GetFinalIndex();
-          double 	calcCounts 	= EffectiveCrossSection_Beam.at(i)[index_final][index_init];
-          double 	exptCounts 	= exptData_Beam.at(i).GetData().at(t).GetCounts();
-          double	sigma		= (exptData_Beam.at(i).GetData().at(t).GetUpUnc() + exptData_Beam.at(i).GetData().at(t).GetDnUnc())/2.;  // Average uncertainty
-          sigma 	/= expt_weights.at(i);
-          if(sigma > 0 && calcCounts > 0 && exptCounts > 0){
-            sc_expt.push_back(exptCounts);
-            sc_expt_unc.push_back(sigma);
-            sc_calc.push_back(calcCounts);
-          }				
-        }
-        for(size_t t=0;t<exptData_Beam.at(i).GetDoublet().size();++t){
-          int	index_init1 	= exptData_Beam.at(i).GetDoublet().at(t).GetInitialIndex1();
-          int	index_final1 	= exptData_Beam.at(i).GetDoublet().at(t).GetFinalIndex1();
-          int	index_init2 	= exptData_Beam.at(i).GetDoublet().at(t).GetInitialIndex2();
-          int	index_final2 	= exptData_Beam.at(i).GetDoublet().at(t).GetFinalIndex2();
-          double 	calcCounts 	= EffectiveCrossSection_Beam.at(i)[index_final1][index_init1] + EffectiveCrossSection_Beam.at(i)[index_final2][index_init2];
-          double 	exptCounts 	= exptData_Beam.at(i).GetDoublet().at(t).GetCounts();
-          double	sigma		= (exptData_Beam.at(i).GetDoublet().at(t).GetUpUnc() + exptData_Beam.at(i).GetDoublet().at(t).GetDnUnc())/2.;  // Average uncertainty
-          sigma 	/= expt_weights.at(i);
-          if(sigma > 0 && calcCounts > 0 && exptCounts > 0){
-            sc_expt.push_back(exptCounts);
-            sc_expt_unc.push_back(sigma);
-            sc_calc.push_back(calcCounts);
-          }				
-        }
-      }
-      if(i < exptData_Target.size()){
-        for(size_t t=0;t<exptData_Target.at(i).GetData().size();++t){
-          int	index_init 	= exptData_Target.at(i).GetData().at(t).GetInitialIndex();
-          int	index_final 	= exptData_Target.at(i).GetData().at(t).GetFinalIndex();
-          double 	calcCounts 	= EffectiveCrossSection_Target.at(i)[index_final][index_init];
-          double 	exptCounts 	= exptData_Target.at(i).GetData().at(t).GetCounts();
-          double	sigma		= (exptData_Target.at(i).GetData().at(t).GetUpUnc() + exptData_Target.at(i).GetData().at(t).GetDnUnc())/2.;  // Average uncertainty
-          sigma 	/= expt_weights.at(i);
-          if(sigma > 0 && calcCounts > 0 && exptCounts > 0){
-            sc_expt.push_back(exptCounts);
-            sc_expt_unc.push_back(sigma);
-            sc_calc.push_back(calcCounts);
-          }
-        }
-        for(size_t t=0;i<exptData_Target.at(i).GetDoublet().size();++t){
-          int	index_init1 	= exptData_Target.at(i).GetDoublet().at(t).GetInitialIndex1();
-          int	index_final1 	= exptData_Target.at(i).GetDoublet().at(t).GetFinalIndex1();
-          int	index_init2 	= exptData_Target.at(i).GetDoublet().at(t).GetInitialIndex2();
-          int	index_final2 	= exptData_Target.at(i).GetDoublet().at(t).GetFinalIndex2();
-          double 	calcCounts 	= EffectiveCrossSection_Target.at(i)[index_final1][index_init1] + EffectiveCrossSection_Target.at(i)[index_final2][index_init2];
-          double 	exptCounts 	= exptData_Target.at(i).GetDoublet().at(t).GetCounts();
-          double	sigma		= (exptData_Target.at(i).GetDoublet().at(t).GetUpUnc() + exptData_Target.at(i).GetDoublet().at(t).GetDnUnc())/2.;  // Average uncertainty
-          sigma 	/= expt_weights.at(i);
-          if(sigma > 0 && calcCounts > 0 && exptCounts > 0){
-            sc_expt.push_back(exptCounts);
-            sc_expt_unc.push_back(sigma);
-            sc_calc.push_back(calcCounts);
-          }								
-        }
-      }
-    }
-
-    if(sc_expt.size() > 0){
-      ScalingFitFCN theFCN;
-
-      theFCN.SetData(sc_expt,sc_expt_unc,sc_calc);
-		
-      ROOT::Math::Minimizer *min =
-        ROOT::Math::Factory::CreateMinimizer("Minuit2","Migrad");
-      ROOT::Math::Functor f_init(theFCN,1);
-      min->SetFunction(f_init);
-      min->SetVariable(0,"Scaling",1,0.000001);
-      min->SetTolerance(0.001);
-      min->Minimize();
-
-
-      //min->PrintResults();
-		
-      for(size_t ss=0;ss<scalingParameters.at(s).GetExperimentNumbers().size();ss++){
-        size_t i 	= scalingParameters.at(s).GetExperimentNumbers().at(ss);
-        scaling[i]	= min->X()[0];
-      }
-      
-      delete min;
-    }
-    else{
-      for(size_t ss=0;ss<scalingParameters.at(s).GetExperimentNumbers().size();ss++){
-        size_t i 	= scalingParameters.at(s).GetExperimentNumbers().at(ss);
-        scaling[i]	= 0;
-      }
-
-    }
-
+    scalingParameters.at(s).Fit(exptData_Beam, EffectiveCrossSection_Beam,
+                                exptData_Target, EffectiveCrossSection_Target,
+                                expt_weights, scaling);
   }
-
   
   double			beamchisq = 0;
   std::vector<double>	beamexptchisq;

@@ -1107,135 +1107,39 @@ void GOSIASimFitter::ReadTargetFittingParameters(std::string filename) {
   fstream.close();
 }
 
-void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> norms) {
-  file->cd();
-  UpdateMEs();
-  std::vector<double> beam_mes = GetBeamMEs();
+void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> norms, std::vector<double> &scaling, 
+                                      std::vector<TMatrixD> &EffectiveCrossSection, std::vector<TMatrixD> &correctionFactors,
+                                      std::vector<ExperimentData> &exptData, std::string species) {
   
-  TransitionRates rates_b(&fNucleus_Beam);
-
-  RunGosia(beam_inputfile,
-           workingDir,
-           all_detectors,
-           beam_mes,
-           beam_yields,
-           0);
-  
-	GOSIAReader	beam_gosiaReader(&fNucleus_Beam, beam_yields);	//	Grab the GOSIA yields
-  
-	std::vector<ExperimentData>	beamCalc	= beam_gosiaReader.GetGOSIAData();
-	EffectiveCrossSection_Beam.clear();	
-
-	for(size_t i=0; i<beamCalc.size(); i++){
-		TMatrixD	tmpMat;
-		tmpMat.ResizeTo(rates_b.GetBranchingRatios().GetNrows(),rates_b.GetBranchingRatios().GetNcols());
-		size_t	nRows = beamCalc.at(i).GetData().size();
-		for(size_t j=0; j<nRows; j++){
-			int	init		= beamCalc.at(i).GetData().at(j).GetInitialIndex();
-			int	fina		= beamCalc.at(i).GetData().at(j).GetFinalIndex();
-			double 	counts 		= beamCalc.at(i).GetData().at(j).GetCounts();
-			tmpMat[fina][init]	= counts * correctionFactors_Beam.at(i)[init][fina];
-			tmpMat[init][fina]	= counts * correctionFactors_Beam.at(i)[init][fina];
-		}
-		EffectiveCrossSection_Beam.push_back(tmpMat);
-	}
-
-  std::vector<double>	scaling;
-	scaling.resize(exptData_Beam.size());
-	for(size_t s=0;s<scalingParameters.size();s++){
-		std::vector<double>	sc_expt;
-		std::vector<double>	sc_expt_unc;
-		std::vector<double>	sc_calc;
-		for(size_t ss=0;ss<scalingParameters.at(s).GetExperimentNumbers().size();ss++){
-			size_t i = scalingParameters.at(s).GetExperimentNumbers().at(ss);
-			if(expt_weights.at(i) == 0) 
-				continue;
-			if(i < exptData_Beam.size()){
-				for(size_t t=0;t<exptData_Beam.at(i).GetData().size();++t){
-					int	index_init 	= exptData_Beam.at(i).GetData().at(t).GetInitialIndex();
-					int	index_final 	= exptData_Beam.at(i).GetData().at(t).GetFinalIndex();
-					double 	calcCounts 	= EffectiveCrossSection_Beam.at(i)[index_final][index_init];
-					double 	exptCounts 	= exptData_Beam.at(i).GetData().at(t).GetCounts();
-					double	sigma		= (exptData_Beam.at(i).GetData().at(t).GetUpUnc() + exptData_Beam.at(i).GetData().at(t).GetDnUnc())/2.;  // Average uncertainty
-					sigma 	/= expt_weights.at(i);
-					if(sigma > 0 && calcCounts > 0 && exptCounts > 0){
-						sc_expt.push_back(exptCounts);
-						sc_expt_unc.push_back(sigma);
-						sc_calc.push_back(calcCounts);
-					}				
-				}
-				for(size_t t=0;i<exptData_Beam.at(t).GetDoublet().size();++t){
-					int	index_init1 	= exptData_Beam.at(i).GetDoublet().at(t).GetInitialIndex1();
-					int	index_final1 	= exptData_Beam.at(i).GetDoublet().at(t).GetFinalIndex1();
-					int	index_init2 	= exptData_Beam.at(i).GetDoublet().at(t).GetInitialIndex2();
-					int	index_final2 	= exptData_Beam.at(i).GetDoublet().at(t).GetFinalIndex2();
-					double 	calcCounts 	= EffectiveCrossSection_Beam.at(i)[index_final1][index_init1] + EffectiveCrossSection_Beam.at(i)[index_final2][index_init2];
-					double 	exptCounts 	= exptData_Beam.at(i).GetDoublet().at(t).GetCounts();
-					double	sigma		= (exptData_Beam.at(i).GetDoublet().at(t).GetUpUnc() + exptData_Beam.at(i).GetDoublet().at(t).GetDnUnc())/2.;  // Average uncertainty
-					sigma 	/= expt_weights.at(i);
-					if(sigma > 0 && calcCounts > 0 && exptCounts > 0){
-						sc_expt.push_back(exptCounts);
-						sc_expt_unc.push_back(sigma);
-						sc_calc.push_back(calcCounts);
-					}				
-				}
-			}
-    }
-
-    if(sc_expt.size() > 0){
-			ScalingFitFCN theFCN;
-
-			theFCN.SetData(sc_expt,sc_expt_unc,sc_calc);
-		
-			ROOT::Math::Minimizer *min =
-				ROOT::Math::Factory::CreateMinimizer("Minuit2","Migrad");
-			ROOT::Math::Functor f_init(theFCN,1);
-			min->SetFunction(f_init);
-			min->SetVariable(0,"Scaling",1,0.000001);
-			min->SetTolerance(0.001);
-			min->Minimize();
-
-
-			//min->PrintResults();
-		
-			for(size_t ss=0;ss<scalingParameters.at(s).GetExperimentNumbers().size();ss++){
-				size_t i 	= scalingParameters.at(s).GetExperimentNumbers().at(ss);
-				scaling[i]	= min->X()[0];
-			}
-      delete min;      
-		}
-		else{
-			for(size_t ss=0;ss<scalingParameters.at(s).GetExperimentNumbers().size();ss++){
-				size_t i 	= scalingParameters.at(s).GetExperimentNumbers().at(ss);
-				scaling[i]	= 0;
-			}
-
-		}	
-	}
-
-  int			counter = 0;
-
-
   std::map<std::pair<int, int>, TGraph* > calcGraphs;
   std::map<std::pair<int, int>, TGraphErrors* > expGraphs;
-  std::map<std::pair<int, int>, TMultiGraph* > graphs;
+  std::map<std::pair<int, int>, TMultiGraph* > Graphs;
 
   std::map<std::pair<int, int>, TGraph* > normCalcGraphs;
   std::map<std::pair<int, int>, TGraphErrors* > normExpGraphs;
   std::map<std::pair<int, int>, TMultiGraph* > normGraphs;
   
-  std::map<std::pair<int, int>, int > write;
+  //generate list of init,final pairs we need graphs for
+  //includes individual members of doublets and combined doublets
 
-	for(unsigned int i=0;i<exptData_Beam.size();i++){
+  //go through list, for each make calcGraph, expGraph
+  // -> if doublet then no calcGraph
+  // -> if no data then no expGraph
+
+  //go through list again to make multigraphs
+  //if both calcGraph + expGraph then add to multiGraph
+  //if doublet then fetch component graphs + make summed graph + add to multigraph
+
+	for(unsigned int i=0;i<exptData.size();i++){
     
 		double	exptchisq	= 0;
 		if(expt_weights.at(i) == 0) 
 			continue;
     
-		for(unsigned int t=0;t<exptData_Beam.at(i).GetData().size();++t){
+		for(unsigned int t=0;t<exptData.at(i).GetData().size();++t){
 			double 	tmp 		= 0;
-			int	index_init 	= exptData_Beam.at(i).GetData().at(t).GetInitialIndex();
-			int	index_final 	= exptData_Beam.at(i).GetData().at(t).GetFinalIndex();
+			int	index_init 	= exptData.at(i).GetData().at(t).GetInitialIndex();
+			int	index_final 	= exptData.at(i).GetData().at(t).GetFinalIndex();
 
       TGraph *calcGraph;
       TGraphErrors *expGraph;
@@ -1247,131 +1151,299 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
       
       if (calcGraphs.find({index_init, index_final}) == calcGraphs.end()) {
         calcGraph = new TGraph();
-        expGraph = new TGraphErrors();
-        graph = new TMultiGraph();
-
-        normCalcGraph = new TGraph();
-        normExpGraph = new TGraphErrors();
-        normGraph = new TMultiGraph();
-        
         calcGraphs[{index_init, index_final}] = calcGraph;
-        expGraphs[{index_init, index_final}] = expGraph;
-        graphs[{index_init, index_final}] = graph;
-
-        normCalcGraphs[{index_init, index_final}] = normCalcGraph;
-        normExpGraphs[{index_init, index_final}] = normExpGraph;
-        normGraphs[{index_init, index_final}] = normGraph;
-
         TString calcname;
-        calcname.Form("calcYields_%i_%i", index_init, index_final);
-        TString expname;
-        expname.Form("expYields_%i_%i", index_init, index_final);
-
-        TString normcalcname;
-        normcalcname.Form("calcYieldsNrm_%i_%i", index_init, index_final);
-        TString normexpname;
-        normexpname.Form("expYieldsNrm_%i_%i", index_init, index_final);
-        
+        calcname.Form("calcYields%s_%i_%i", species.c_str(), index_init, index_final);
         calcGraph->SetName(calcname.Data());
         calcGraph->SetLineWidth(2);
         calcGraph->SetLineColor(kRed);
+        file->Append(calcGraph);
 
-        expGraph->SetMarkerStyle(kFullCircle);
-        expGraph->SetName(expname.Data());
-
-        normCalcGraph->SetName(normcalcname.Data());
+        normCalcGraph = new TGraph();
+        normCalcGraphs[{index_init, index_final}] = normCalcGraph;
+        calcname.Form("calcYieldsNrm%s_%i_%i", species.c_str(), index_init, index_final);
+        normCalcGraph->SetName(calcname.Data());
         normCalcGraph->SetLineWidth(2);
         normCalcGraph->SetLineColor(kRed);
-
-        normExpGraph->SetMarkerStyle(kFullCircle);
-        normExpGraph->SetName(normexpname.Data());
-        
-        TString name;
-        name.Form("yields_%i_%i", index_init, index_final);
-        graph->SetName(name.Data());
-        graph->Add(calcGraph, "L");
-        graph->Add(expGraph, "P");
-
-        TString normname;
-        normname.Form("yieldsNrm_%i_%i", index_init, index_final);
-        normGraph->SetName(normname.Data());
-        normGraph->Add(normCalcGraph, "L");
-        normGraph->Add(normExpGraph, "P");        
+        file->Append(normCalcGraph);
       }
       else {
         calcGraph =         calcGraphs[{index_init, index_final}];
-        expGraph =           expGraphs[{index_init, index_final}];
-        graph =           graphs[{index_init, index_final}];
-
         normCalcGraph =         normCalcGraphs[{index_init, index_final}];
+      }
+      if (expGraphs.find({index_init, index_final}) == expGraphs.end()) {
+        expGraph = new TGraphErrors();        
+        expGraphs[{index_init, index_final}] = expGraph;
+        TString expname;
+        expname.Form("expYields%s_%i_%i", species.c_str(), index_init, index_final);
+        expGraph->SetMarkerStyle(kFullCircle);
+        expGraph->SetName(expname.Data());
+        file->Append(expGraph);
+
+        normExpGraph = new TGraphErrors();
+        normExpGraphs[{index_init, index_final}] = normExpGraph;
+        expname.Form("expYieldsNrm%s_%i_%i", species.c_str(), index_init, index_final);
+        normExpGraph->SetMarkerStyle(kFullCircle);
+        normExpGraph->SetName(expname.Data());
+        file->Append(normExpGraph);
+      }
+      else {
+        expGraph =           expGraphs[{index_init, index_final}];
         normExpGraph =           normExpGraphs[{index_init, index_final}];
+      }
+      if (Graphs.find({index_init, index_final}) == Graphs.end()) {        
+        graph = new TMultiGraph();        
+        Graphs[{index_init, index_final}] = graph;
+        TString name;
+        name.Form("yields%s_%i_%i", species.c_str(), index_init, index_final);
+        graph->SetName(name.Data());
+        graph->Add(calcGraph, "L");
+        graph->Add(expGraph, "P");
+        file->Append(graph);
+
+
+        normGraph = new TMultiGraph();
+        normGraphs[{index_init, index_final}] = normGraph;
+        name.Form("yieldsNrm%s_%i_%i", species.c_str(), index_init, index_final);
+        normGraph->SetName(name.Data());
+        normGraph->Add(normCalcGraph, "L");
+        normGraph->Add(normExpGraph, "P");
+        file->Append(normGraph);
+      }
+      else {
+        graph =           Graphs[{index_init, index_final}];
         normGraph =           normGraphs[{index_init, index_final}];       
       }
       
-			double 	calcCounts 	= scaling.at(i) * EffectiveCrossSection_Beam.at(i)[index_final][index_init];
-			double 	exptCounts 	= exptData_Beam.at(i).GetData().at(t).GetCounts();
-			double	sigma		= exptData_Beam.at(i).GetData().at(t).GetUpUnc() * exptData_Beam.at(i).GetData().at(t).GetDnUnc();
-			double	sigma_prime	= (exptData_Beam.at(i).GetData().at(t).GetUpUnc() - exptData_Beam.at(i).GetData().at(t).GetDnUnc());
-			sigma			/= expt_weights.at(i);
-      sigma_prime	/= expt_weights.at(i);
+			double 	calcCounts 	= scaling.at(i) * EffectiveCrossSection.at(i)[index_final][index_init];
+			double 	exptCounts 	= exptData.at(i).GetData().at(t).GetCounts();
 
+      std::cout << i << "   " << index_init << "    " << index_final << "  exptCounts = " << exptCounts << std::endl;
       calcGraph->AddPoint(i+1, calcCounts);
       expGraph->AddPoint(i+1, exptCounts);
-      expGraph->SetPointError(expGraph->GetN()-1, 0, exptData_Beam.at(i).GetData().at(t).GetUpUnc());
+      expGraph->SetPointError(expGraph->GetN()-1, 0, exptData.at(i).GetData().at(t).GetUpUnc());
 
-      normCalcGraph->AddPoint(angles[i], calcCounts/(scaling.at(i)*correctionFactors_Beam.at(i)[index_final][index_init]));
-      normExpGraph->AddPoint(angles[i], exptCounts/(scaling.at(i)*correctionFactors_Beam.at(i)[index_final][index_init]));
-      normExpGraph->SetPointError(expGraph->GetN()-1, 0, exptData_Beam.at(i).GetData().at(t).GetUpUnc()/(scaling.at(i)*correctionFactors_Beam.at(i)[index_final][index_init]));
+      normCalcGraph->AddPoint(angles[i], calcCounts/(scaling.at(i)*correctionFactors.at(i)[index_final][index_init]));
+      normExpGraph->AddPoint(angles[i], exptCounts/(scaling.at(i)*correctionFactors.at(i)[index_final][index_init]));
+      normExpGraph->SetPointError(normExpGraph->GetN()-1, 0, exptData.at(i).GetData().at(t).GetUpUnc()/(scaling.at(i)*correctionFactors.at(i)[index_final][index_init]));
 		}
-		for(unsigned int t=0;t<exptData_Beam.at(i).GetDoublet().size();++t){
-			double 	tmp 		= 0;
-			int	index_init1 	= exptData_Beam.at(i).GetDoublet().at(t).GetInitialIndex1();
-			int	index_final1 	= exptData_Beam.at(i).GetDoublet().at(t).GetFinalIndex1();
-			int	index_init2 	= exptData_Beam.at(i).GetDoublet().at(t).GetInitialIndex2();
-			int	index_final2 	= exptData_Beam.at(i).GetDoublet().at(t).GetFinalIndex2();
-			double 	calcCounts 	= scaling.at(i) * (EffectiveCrossSection_Beam.at(i)[index_final1][index_init1] + EffectiveCrossSection_Beam.at(i)[index_final2][index_init2]);
-			double 	exptCounts 	= exptData_Beam.at(i).GetDoublet().at(t).GetCounts();
-			double	sigma		= exptData_Beam.at(i).GetDoublet().at(t).GetUpUnc() * exptData_Beam.at(i).GetDoublet().at(t).GetDnUnc();
-			double	sigma_prime	= (exptData_Beam.at(i).GetDoublet().at(t).GetUpUnc() - exptData_Beam.at(i).GetDoublet().at(t).GetDnUnc());
-			sigma			/= expt_weights.at(i);
-			sigma_prime		/= expt_weights.at(i);
-		}
-		counter++;
-	}
-
-  
-  for(unsigned int i=0;i<exptData_Beam.size();i++){
     
-		double	exptchisq	= 0;
-		if(expt_weights.at(i) == 0) 
-			continue;
-    
-		for(unsigned int t=0;t<exptData_Beam.at(i).GetData().size();++t){
+		for(unsigned int t=0;t<exptData.at(i).GetDoublet().size();++t){
 			double 	tmp 		= 0;
-			int	index_init 	= exptData_Beam.at(i).GetData().at(t).GetInitialIndex();
-			int	index_final 	= exptData_Beam.at(i).GetData().at(t).GetFinalIndex();
+			int	index_init1 	= exptData.at(i).GetDoublet().at(t).GetInitialIndex1();
+			int	index_final1 	= exptData.at(i).GetDoublet().at(t).GetFinalIndex1();
+			int	index_init2 	= exptData.at(i).GetDoublet().at(t).GetInitialIndex2();
+			int	index_final2 	= exptData.at(i).GetDoublet().at(t).GetFinalIndex2();
 
-      if (calcGraphs.find({index_init, index_final}) == calcGraphs.end()) {
+      TGraph *calcGraph;
+      TGraphErrors *expGraph;
+      TMultiGraph *graph;
+      TGraph *calcGraph1;
+      TGraph *calcGraph2;
+      
+      TGraph *normCalcGraph;
+      TGraphErrors *normExpGraph;
+      TMultiGraph *normGraph;
+      TGraph *normCalcGraph1;
+      TGraph *normCalcGraph2;
+
+      if (calcGraphs.find({index_init1, index_final1}) != calcGraphs.end()) {
+        calcGraph1 = calcGraphs[{index_init1, index_final1}];
+        normCalcGraph1 = normCalcGraphs[{index_init1, index_final1}];
       }
       else {
-        if (write.find({index_init, index_final}) == write.end()) {
-          calcGraphs[{index_init, index_final}]->Write();
-          expGraphs[{index_init, index_final}]->Write();
-          graphs[{index_init, index_final}]->Write();
+        calcGraph1 = new TGraph();
+        calcGraphs[{index_init1, index_final1}] = calcGraph1;
+        TString calcname;
+        calcname.Form("calcYields%s_%i_%i", species.c_str(), index_init1, index_final1);
+        calcGraph1->SetName(calcname.Data());
+        calcGraph1->SetLineWidth(1);
+        calcGraph1->SetLineColor(kRed);
+        file->Append(calcGraph1);
 
-          normCalcGraphs[{index_init, index_final}]->Write();
-          normExpGraphs[{index_init, index_final}]->Write();
-          normGraphs[{index_init, index_final}]->Write();
-        }
-        else {
-          write[{index_init, index_final}] = 1;
-        }
+        normCalcGraph1 = new TGraph();
+        normCalcGraphs[{index_init1, index_final1}] = normCalcGraph1;
+        calcname.Form("calcYieldsNrm%s_%i_%i", species.c_str(), index_init1, index_final1);
+        normCalcGraph1->SetName(calcname.Data());
+        normCalcGraph1->SetLineWidth(1);
+        normCalcGraph1->SetLineColor(kRed);
+        file->Append(normCalcGraph1);
       }
-    }
-  }
-  file->Write();  
+        
+      if (calcGraphs.find({index_init2, index_final2}) != calcGraphs.end()) {
+        calcGraph2 = calcGraphs[{index_init2, index_final2}];
+        normCalcGraph2 = normCalcGraphs[{index_init2, index_final2}];
+      }
+      else {
+        calcGraph2 = new TGraph();
+        calcGraphs[{index_init2, index_final2}] = calcGraph2;
+        TString calcname;
+        calcname.Form("calcYields%s_%i_%i", species.c_str(), index_init2, index_final2);
+        calcGraph2->SetName(calcname.Data());
+        calcGraph2->SetLineWidth(1);
+        calcGraph2->SetLineColor(kRed);
+        file->Append(calcGraph2);
+
+        normCalcGraph2 = new TGraph();
+        normCalcGraphs[{index_init2, index_final2}] = normCalcGraph2;
+        calcname.Form("calcYieldsNrm%s_%i_%i", species.c_str(), index_init2, index_final2);
+        normCalcGraph2->SetName(calcname.Data());
+        normCalcGraph2->SetLineWidth(1);
+        normCalcGraph2->SetLineColor(kRed);
+        file->Append(normCalcGraph2);
+      }
+      
+      if (calcGraphs.find({index_init1*100+index_init2, index_final1*100+index_final2}) != calcGraphs.end()) {
+        calcGraph = calcGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}];
+        normCalcGraph = normCalcGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}];
+      }
+      else {
+        calcGraph = new TGraph();
+        calcGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}] = calcGraph;
+        TString calcname;
+        calcname.Form("calcYields%s_%i_%i", species.c_str(), index_init1*100+index_init2, index_final1*100+index_final2);
+        calcGraph->SetName(calcname.Data());
+        calcGraph->SetLineWidth(2);
+        calcGraph->SetLineColor(kRed);
+        file->Append(calcGraph);
+
+        normCalcGraph = new TGraph();
+        normCalcGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}] = normCalcGraph;
+        calcname.Form("calcYieldsNrm%s_%i_%i", species.c_str(), index_init2, index_final2);
+        normCalcGraph->SetName(calcname.Data());
+        normCalcGraph->SetLineWidth(2);
+        normCalcGraph->SetLineColor(kRed);
+        file->Append(normCalcGraph);
+      }
+      
+      if (expGraphs.find({index_init1*100+index_init2, index_final1*100+index_final2}) != expGraphs.end()) {
+        expGraph = expGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}];
+        normExpGraph = normExpGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}];
+      }
+      else {
+        expGraph = new TGraphErrors();
+        expGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}] = expGraph;
+        TString expname;
+        expname.Form("expYields%s_%i_%i", species.c_str(), index_init1*100+index_init2, index_final1*100+index_final2);
+        expGraph->SetName(expname.Data());
+        expGraph->SetMarkerStyle(kFullCircle);
+        file->Append(expGraph);
+
+        normExpGraph = new TGraphErrors();
+        normExpGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}] = normExpGraph;
+        expname.Form("expYieldsNrm%s_%i_%i", species.c_str(), index_init1*100+index_init2, index_final1*100+index_final2);
+        normExpGraph->SetName(expname.Data());
+        normExpGraph->SetMarkerStyle(kFullCircle);
+        file->Append(normExpGraph);
+      }        
+      
+      if (Graphs.find({index_init1*100+index_init2, index_final1*100+index_final2}) != Graphs.end()) {
+        graph = Graphs[{index_init1*100+index_init2, index_final1*100+index_final2}];
+        normGraph = normGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}];
+      }
+      else {
+        graph = new TMultiGraph();
+        TString name;
+        name.Form("yields%s_%i_%i", species.c_str(), index_init1*100+index_init2, index_final1*100+index_final2);
+        graph->SetName(name.Data());
+        graph->Add(calcGraph1, "L");
+        graph->Add(calcGraph2, "L");
+        graph->Add(calcGraph, "L");
+        graph->Add(expGraph, "P");
+        file->Append(graph);
+
+        normGraph = new TMultiGraph();
+        name.Form("yieldsNrm%s_%i_%i", species.c_str(), index_init1*100+index_init2, index_final1*100+index_final2);
+        normGraph->SetName(name.Data());
+        normGraph->Add(normCalcGraph1, "L");
+        normGraph->Add(normCalcGraph2, "L");
+        normGraph->Add(normCalcGraph, "L");
+        normGraph->Add(normExpGraph, "P");
+        file->Append(normGraph);
+      }
+
+			double 	calcCounts1 	= scaling.at(i) * EffectiveCrossSection.at(i)[index_final1][index_init1];
+      double 	calcCounts2 	= scaling.at(i) * EffectiveCrossSection.at(i)[index_final2][index_init2];
+			double 	exptCounts 	= exptData.at(i).GetDoublet().at(t).GetCounts();
+
+      calcGraph1->AddPoint(i+1, calcCounts1);
+      calcGraph2->AddPoint(i+1, calcCounts2);
+      calcGraph->AddPoint(i+1, calcCounts1+calcCounts2);
+      expGraph->AddPoint(i+1, exptCounts);
+      expGraph->SetPointError(expGraph->GetN()-1, 0, exptData.at(i).GetData().at(t).GetUpUnc());
+
+      normCalcGraph->AddPoint(angles[i], calcCounts1/(scaling.at(i)*correctionFactors.at(i)[index_final1][index_init1]) + calcCounts2/(scaling.at(i)*correctionFactors.at(i)[index_final2][index_init2]));
+
+      double exptNorm = (scaling.at(i)*correctionFactors.at(i)[index_final1][index_init1])*(scaling.at(i)*correctionFactors.at(i)[index_final2][index_init2]) /
+        ((scaling.at(i)*correctionFactors.at(i)[index_final1][index_init1]) * calcCounts2 + (scaling.at(i)*correctionFactors.at(i)[index_final2][index_init2]) * calcCounts1 ) * (calcCounts1 + calcCounts2);
+      
+      normExpGraph->AddPoint(angles[i], exptCounts/exptNorm);
+      normExpGraph->SetPointError(normExpGraph->GetN()-1, 0, exptData.at(i).GetData().at(t).GetUpUnc()/exptNorm);
+
+		}
+	}
 }
 
+void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> norms) {
+  file->cd();
+  UpdateMEs();
+  std::vector<double> beam_mes = GetBeamMEs();
+  std::vector<double> target_mes = GetTargetMEs();
+  
+  TransitionRates rates_b(&fNucleus_Beam);
+  TransitionRates rates_t(&fNucleus_Target);
+
+  RunGosia(beam_inputfile,
+           workingDir,
+           all_detectors,
+           beam_mes,
+           beam_yields,
+           0);
+
+  RunGosia(target_inputfile,
+           workingDir,
+           all_detectors,
+           target_mes,
+           target_yields,
+           0);
+  
+	GOSIAReader	beam_gosiaReader(&fNucleus_Beam, beam_yields);	//	Grab the GOSIA yields
+  GOSIAReader target_gosiaReader(&fNucleus_Target, target_yields);	//	Grab the GOSIA yields
+  
+  std::vector<ExperimentData>	beamCalc	= beam_gosiaReader.GetGOSIAData();
+  std::vector<ExperimentData>	targetCalc	= target_gosiaReader.GetGOSIAData();
+  EffectiveCrossSection_Beam.clear();	
+  EffectiveCrossSection_Target.clear();	
+
+  int dim_b = rates_b.GetBranchingRatios().GetNrows();
+  int dim_t = rates_t.GetBranchingRatios().GetNrows();
+  for(size_t i=0; i<beamCalc.size(); i++){
+    EffectiveCrossSection_Beam.push_back(beamCalc.at(i).GetEffectiveCrossSection(correctionFactors_Beam.at(i), dim_b));
+  };
+  
+  for(size_t i=0; i<targetCalc.size(); i++){
+    EffectiveCrossSection_Target.push_back(targetCalc.at(i).GetEffectiveCrossSection(correctionFactors_Target.at(i), dim_t));
+  }
+
+  std::vector<double>	scaling;
+  scaling.resize(exptData_Beam.size());
+  for(size_t s=0;s<scalingParameters.size();s++){
+     scalingParameters.at(s).Fit(exptData_Beam, EffectiveCrossSection_Beam,
+                                exptData_Target, EffectiveCrossSection_Target,
+                                expt_weights, scaling);
+  }
+
+  WriteYieldGraphs(file, angles, norms, scaling,
+                   EffectiveCrossSection_Beam, correctionFactors_Beam,
+                   exptData_Beam, "Beam");
+
+  WriteYieldGraphs(file, angles, norms, scaling,
+                   EffectiveCrossSection_Target, correctionFactors_Target,
+                   exptData_Target, "Target");
+
+  file->Write();  
+  
+}
 
 FittingElement* GOSIASimFitter::GetBeamFittingElement(std::string name) {
   for (int j=0; j<fittingElements_Beam.size(); ++j) {

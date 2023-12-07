@@ -120,11 +120,25 @@ void Nucleus::SetNstates(int nS){
 		MatrixElementsUL[i].ResizeTo(nS,nS);
 		MatrixElementsLL[i].ResizeTo(nS,nS);
     ConversionCoefficients[i].ResizeTo(nS,nS);
+    for (int j=0; j<nS; ++j) {
+      for (int k=0; k<nS; ++k) {
+        MatrixElements.at(i)[j][k] = 0.0;
+        MatrixElementsUL.at(i)[j][k] = 0.0;
+        MatrixElementsLL.at(i)[j][k] = 0.0;
+        ConversionCoefficients.at(i)[j][k] = 0.0;
+      }
+    }
 	}
 
   OmegaCoefficients.ResizeTo(nS,nS);
   RhoSquared.ResizeTo(nS,nS);
 	
+  for (int j=0; j<nS; ++j) {
+    for (int k=0; k<nS; ++k) {
+      OmegaCoefficients[j][k] = 0.0;
+      RhoSquared[j][k] = 0.0;
+    }
+  }
 }
 
 void Nucleus::SetState(int s, double E, double J, int P){

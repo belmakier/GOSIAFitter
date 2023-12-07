@@ -104,7 +104,6 @@ void	GOSIAReader::ReadGOSIAFile(out_yields &gosia_yields){
       double yld = gosia_yields.experiment[i].yield[j];
       ni--;	// GOSIA to Cygnus numbering
       nf--;		// GOSIA to Cygnus numbering
-      //std::cout << i << "   " << j << "   " << ni << "   " << nf << "   " << yld << std::endl;
       if(ni < fNucleus.GetNstates() && nf < fNucleus.GetNstates() && ni >= 0 && nf >= 0){
         tmpExpt.AddData(ni,nf,yld,0);        
       }
