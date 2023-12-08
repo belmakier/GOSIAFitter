@@ -1218,7 +1218,6 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
 			double 	calcCounts 	= scaling.at(i) * EffectiveCrossSection.at(i)[index_final][index_init];
 			double 	exptCounts 	= exptData.at(i).GetData().at(t).GetCounts();
 
-      std::cout << i << "   " << index_init << "    " << index_final << "  exptCounts = " << exptCounts << std::endl;
       calcGraph->AddPoint(i+1, calcCounts);
       expGraph->AddPoint(i+1, exptCounts);
       expGraph->SetPointError(expGraph->GetN()-1, 0, exptData.at(i).GetData().at(t).GetUpUnc());
