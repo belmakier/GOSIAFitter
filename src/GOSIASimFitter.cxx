@@ -1069,7 +1069,7 @@ void GOSIASimFitter::WriteTargetFittingParameters(std::ostream &outstream) {
 
 void GOSIASimFitter::WriteTargetFittingParameters(std::string filename) {
   std::ofstream fstream(filename);
-  WriteBeamFittingParameters(fstream);
+  WriteTargetFittingParameters(fstream);
   fstream.close();
 }
 
@@ -1100,7 +1100,7 @@ void GOSIASimFitter::ReadTargetFittingParameters(std::string filename) {
 
     FittingElement *fe = fittingElements_Target[i];
     if (name.compare(fe->GetName())) { std::cerr << "Error! Parameter " << name << " is not the same as " << fe->GetName() << std::endl; exit(1); }
-    if (name.compare(fe->GetType())) { std::cerr << "Error! Parameter type " << type << " is not the same as " << fe->GetType() << std::endl; exit(1); }
+    if (type.compare(fe->GetType())) { std::cerr << "Error! Parameter type " << type << " is not the same as " << fe->GetType() << std::endl; exit(1); }
 
     fe->SetValue(j, value);    
   }
