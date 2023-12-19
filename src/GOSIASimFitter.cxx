@@ -1157,7 +1157,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         calcGraph->SetName(calcname.Data());
         calcGraph->SetLineWidth(2);
         calcGraph->SetLineColor(kRed);
-        file->Append(calcGraph);
+        //file->Append(calcGraph);
 
         normCalcGraph = new TGraph();
         normCalcGraphs[{index_init, index_final}] = normCalcGraph;
@@ -1165,7 +1165,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         normCalcGraph->SetName(calcname.Data());
         normCalcGraph->SetLineWidth(2);
         normCalcGraph->SetLineColor(kRed);
-        file->Append(normCalcGraph);
+        //file->Append(normCalcGraph);
       }
       else {
         calcGraph =         calcGraphs[{index_init, index_final}];
@@ -1178,14 +1178,14 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         expname.Form("expYields%s_%i_%i", species.c_str(), index_init, index_final);
         expGraph->SetMarkerStyle(kFullCircle);
         expGraph->SetName(expname.Data());
-        file->Append(expGraph);
+        //file->Append(expGraph);
 
         normExpGraph = new TGraphErrors();
         normExpGraphs[{index_init, index_final}] = normExpGraph;
         expname.Form("expYieldsNrm%s_%i_%i", species.c_str(), index_init, index_final);
         normExpGraph->SetMarkerStyle(kFullCircle);
         normExpGraph->SetName(expname.Data());
-        file->Append(normExpGraph);
+        //file->Append(normExpGraph);
       }
       else {
         expGraph =           expGraphs[{index_init, index_final}];
@@ -1258,7 +1258,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         calcGraph1->SetName(calcname.Data());
         calcGraph1->SetLineWidth(1);
         calcGraph1->SetLineColor(kRed);
-        file->Append(calcGraph1);
+        //file->Append(calcGraph1);
 
         normCalcGraph1 = new TGraph();
         normCalcGraphs[{index_init1, index_final1}] = normCalcGraph1;
@@ -1266,7 +1266,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         normCalcGraph1->SetName(calcname.Data());
         normCalcGraph1->SetLineWidth(1);
         normCalcGraph1->SetLineColor(kRed);
-        file->Append(normCalcGraph1);
+        //file->Append(normCalcGraph1);
       }
         
       if (calcGraphs.find({index_init2, index_final2}) != calcGraphs.end()) {
@@ -1281,7 +1281,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         calcGraph2->SetName(calcname.Data());
         calcGraph2->SetLineWidth(1);
         calcGraph2->SetLineColor(kRed);
-        file->Append(calcGraph2);
+        //file->Append(calcGraph2);
 
         normCalcGraph2 = new TGraph();
         normCalcGraphs[{index_init2, index_final2}] = normCalcGraph2;
@@ -1289,7 +1289,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         normCalcGraph2->SetName(calcname.Data());
         normCalcGraph2->SetLineWidth(1);
         normCalcGraph2->SetLineColor(kRed);
-        file->Append(normCalcGraph2);
+        //file->Append(normCalcGraph2);
       }
       
       if (calcGraphs.find({index_init1*100+index_init2, index_final1*100+index_final2}) != calcGraphs.end()) {
@@ -1304,7 +1304,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         calcGraph->SetName(calcname.Data());
         calcGraph->SetLineWidth(2);
         calcGraph->SetLineColor(kRed);
-        file->Append(calcGraph);
+        //file->Append(calcGraph);
 
         normCalcGraph = new TGraph();
         normCalcGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}] = normCalcGraph;
@@ -1312,7 +1312,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         normCalcGraph->SetName(calcname.Data());
         normCalcGraph->SetLineWidth(2);
         normCalcGraph->SetLineColor(kRed);
-        file->Append(normCalcGraph);
+        //file->Append(normCalcGraph);
       }
       
       if (expGraphs.find({index_init1*100+index_init2, index_final1*100+index_final2}) != expGraphs.end()) {
@@ -1326,14 +1326,14 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         expname.Form("expYields%s_%i_%i", species.c_str(), index_init1*100+index_init2, index_final1*100+index_final2);
         expGraph->SetName(expname.Data());
         expGraph->SetMarkerStyle(kFullCircle);
-        file->Append(expGraph);
+        //file->Append(expGraph);
 
         normExpGraph = new TGraphErrors();
         normExpGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}] = normExpGraph;
         expname.Form("expYieldsNrm%s_%i_%i", species.c_str(), index_init1*100+index_init2, index_final1*100+index_final2);
         normExpGraph->SetName(expname.Data());
         normExpGraph->SetMarkerStyle(kFullCircle);
-        file->Append(normExpGraph);
+        //file->Append(normExpGraph);
       }        
       
       if (Graphs.find({index_init1*100+index_init2, index_final1*100+index_final2}) != Graphs.end()) {
@@ -1342,6 +1342,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
       }
       else {
         graph = new TMultiGraph();
+        Graphs[{index_init1*100+index_init2, index_final1*100+index_final2}] = graph;
         TString name;
         name.Form("yields%s_%i_%i", species.c_str(), index_init1*100+index_init2, index_final1*100+index_final2);
         graph->SetName(name.Data());
@@ -1352,6 +1353,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         file->Append(graph);
 
         normGraph = new TMultiGraph();
+        normGraphs[{index_init1*100+index_init2, index_final1*100+index_final2}] = normGraph;
         name.Form("yieldsNrm%s_%i_%i", species.c_str(), index_init1*100+index_init2, index_final1*100+index_final2);
         normGraph->SetName(name.Data());
         normGraph->Add(normCalcGraph1, "L");
@@ -1381,6 +1383,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
 
 		}
 	}
+  file->Write();  
 }
 
 void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> norms) {
