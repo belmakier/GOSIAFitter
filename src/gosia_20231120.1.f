@@ -621,7 +621,7 @@ C      type(out_det), dimension(32) :: dets;
       real*8 :: wthh
 
       integer*4 :: npoints
-      type(file14_unit_pt) :: meshpoints(999)
+      type(file14_unit_pt) :: meshpoints(4096)
       
       end type file14_unit_exp      
 
@@ -636,11 +636,11 @@ C      type(out_det), dimension(32) :: dets;
       sequence
 
       integer*4 :: npoints
-      integer*4, dimension(999) :: lx
-      integer*4, dimension(999) :: mpin
-      integer*4, dimension(999) :: kloop
-      integer*4, dimension(999) :: ktt
-      real*8, dimension(999) :: dsx
+      integer*4, dimension(4096) :: lx
+      integer*4, dimension(4096) :: mpin
+      integer*4, dimension(4096) :: kloop
+      integer*4, dimension(4096) :: ktt
+      real*8, dimension(4096) :: dsx
 
       end type file17
       
@@ -2324,6 +2324,10 @@ C     &                                  dsx ,
 C     &                                (GRAD(jyi)*dsig*ax,jyi=1,idr)
                                  
                                  np = mesh%exps(lx)%npoints + 1
+                                 IF ( np.ge.4096 ) THEN
+                                    WRITE(*,*)"SEVERE ERROR, TOO MANY"//
+     &                                   "MESH POINTS"
+                                 END IF                                 
                                  mesh%exps(lx)%meshpoints(np)%lx = lx
                                  mesh%exps(lx)%meshpoints(np)%enb = enb
                                  mesh%exps(lx)%meshpoints(np)%tting
@@ -2353,13 +2357,13 @@ C     &                                (GRAD(jyi)*dsig*ax,jyi=1,idr)
      &                                    GRAD(jyi)*dsig*ax , GRAD(jyi)
      &                                         /GRAD(IDRN)
                                        end if
-                                    ENDDO ! Loop on decays jyi
+                                    ENDDO ! Loop on decays jyi                                    
                                  ENDIF ! If printout of yields at meshpoints
  432                             CONTINUE
                               ENDDO ! Loop on detector angles ijan
                            ENDDO ! Loop on theta angles ktt
-                        ENDDO ! Loop on energy meshpoints kloop
-                     ENDDO ! Loop on pin diodes mpin
+                        ENDDO   ! Loop on energy meshpoints kloop
+                     ENDDO      ! Loop on pin diodes mpin
                       
                      EP(lx) = enh
                      TLBDG(lx) = tth
@@ -2491,6 +2495,7 @@ C                       Now we calculate for all the mesh points.
                                     jyv = (jtp-1)*idr + jd
                                     YV(jtp) = ZETA(jyv) ! Point yield
                                  ENDDO ! Loop on theta meshpoints jtp
+      
                                  DO jt = 1 , npct1 ! number of equal divisions in theta for interpolation
                                     xx = (jt-1)*het + tmn/57.2957795
                                     IF ( ISPL.EQ.0 )
@@ -2615,7 +2620,7 @@ C     output%experiment(lx)%dets(ja)%nf(jd) = nf
                                  output%experiment(lx)%nf(jd) = nf
                               ELSE
                                  output%experiment(lx)%yield(jd)
-     &                      = output%experiment(lx)%yield(jd) + GRAD(jd)
+     &                 = output%experiment(lx)%yield(jd) + GRAD(jd)
                               end if
                            ENDDO
                         ENDDO ! Loop over detector angles ja
@@ -10219,7 +10224,7 @@ C Iscal = 3   FUNC(y) = sqrt(y)  FUNC1(y) = y^2
       INTEGER*4 i , Ipc , Irc , Iscal , j , Ndata
       DIMENSION X(*) , Y(*) , w(101) , arh(101,101)
       SAVE arh
-      
+
       IF ( Irc.EQ.2 ) THEN
       ELSEIF ( Irc.EQ.3 ) THEN
          DO i = 1 , Ndata
@@ -12049,7 +12054,7 @@ C maps.
       real*8 :: wthh
 
       integer*4 :: npoints
-      type(file14_unit_pt) :: meshpoints(999)
+      type(file14_unit_pt) :: meshpoints(4096)
       
       end type file14_unit_exp      
 
@@ -12083,9 +12088,14 @@ C maps.
       nfilt = 0
       
       IF ( Nco.EQ.0 ) RETURN
-      
-C      WRITE(*,*) "NMESHPOINTS = ", mesh%exps(Lx)%npoints
+
+C     meshpoints indexing goes [energy][theta][detector]
+C     WRITE(*,*) "NMESHPOINTS = ", mesh%exps(Lx)%npoints
       if (Isko .ne. 0) then
+         IF ( Isko.ge.4096 ) THEN
+            WRITE(*,*)"SEVERE ERROR, TOO MANY"//
+     &           "MESH POINTS"
+         END IF                                 
          DS = mesh%exps(Lx)%meshpoints(Isko)%dsx
          Enb = mesh%exps(Lx)%meshpoints(Isko)%enb
       DO k =1, Idr
@@ -12093,23 +12103,30 @@ C      WRITE(*,*) "NMESHPOINTS = ", mesh%exps(Lx)%npoints
       END DO
       end if
 
+      na = mesh%exps(Lx)%jan1
+C     loop through theta meshpoints
       DO j = 1 , Nflr
-         DS = mesh%exps(Lx)%meshpoints(Isko+j)%dsx
-         Enb = mesh%exps(Lx)%meshpoints(Isko+j)%enb
+         IF ( Isko+(j-1)*na.ge.4096 ) THEN
+            WRITE(*,*)"SEVERE ERROR, TOO MANY"//
+     &           "MESH POINTS"
+         END IF                                 
+         DS = mesh%exps(Lx)%meshpoints(Isko+(j-1)*na)%dsx
+         Enb = mesh%exps(Lx)%meshpoints(Isko+(j-1)*na)%enb
          js = (j-1)*Idr + 1
          jf = js + Idr - 1
          DO k=js,jf
-            ZETA(k) = mesh%exps(Lx)%meshpoints(Isko+j)
+            ZETA(k) = mesh%exps(Lx)%meshpoints(Isko+(j-1)*na)
      &           %ygn(k-js+1)
+
 C            IF (k .EQ. js) THEN
 C               WRITE(*,*) Lx, Isko+j+1, k, ZETA(k)
 C            END If            
          END DO
-         tta = mesh%exps(Lx)%meshpoints(Isko+j)%tting
+         tta = mesh%exps(Lx)%meshpoints(Isko+(j-1)*na)%tting
          XV(j) = tta/57.2957795
       END DO
 
-      RETURN
+C      RETURN
 C      REWIND 14
 
 C      WRITE(*,*) "ISKE = ", Iske
@@ -14667,6 +14684,11 @@ C
       INTEGER*4 i , Iscal
       REAL*8 Xx , Yy
 
+      
+C      WRITE(*,*) "SPLNER for ", Xx
+C      DO i = 1, N
+C         WRITE(*,*) i, X(i), Yr(i)
+C      ENDDO                              
 C     We need at least three points, so if we don't have them, use the
 C     Lagrangian method instead
       IF ( N.LE. 3 ) THEN
