@@ -139,7 +139,7 @@ void TransitionRates::SetMatrixElements(){
 		TransitionAmplitudes.at(i).ResizeTo(fNucleus->GetMatrixElements().at(i).GetNcols(),fNucleus->GetMatrixElements().at(i).GetNrows());
 		for(int x=0;x<TransitionStrengths.at(i).GetNcols();x++){
 			for(int y=0;y<TransitionStrengths.at(i).GetNrows();y++){
-				if(x>y){
+				if(StateE.at(x)>StateE.at(y)){
 					TransitionStrengths.at(i)[y][x] = TMath::Power(MatrixElements.at(i)[y][x],2) / (2 * StateJ.at(x) + 1) * TMath::Power(100,nbarns[i]); 
 					TransitionStrengths_Abs.at(i)[y][x] = (TMath::Power(TMath::Abs(StateE.at(x)-StateE.at(y)),power[i]) * TransitionStrengths.at(i)[y][x]) / multfactor[i];
 					if(i==0)

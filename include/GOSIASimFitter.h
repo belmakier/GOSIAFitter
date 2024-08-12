@@ -157,6 +157,15 @@ class GOSIASimFitter {
                                                double relmat, double relmat_ll, double relmat_ul,
                                                int init_ref, int final_ref,
                                  bool fx=false);
+
+  std::vector<double> SweepBeamParameter(std::string parname, int subparindx, int nvals, double lowval, double highval);
+  void SweepBeamParameter(std::string parname, int subparindx, int nvals, double lowval, double highval, std::ostream &out);
+  void SweepBeamParameter(std::string parname, int subparindx, int nvals, double lowval, double highval, std::string filename);
+
+  void SweepBeamParameter2D(std::string parname1, int subparindx1, std::string parname2, int subparindx2, int nvals1, double lowval1, double highval1, int nvals2, double lowval2, double highval2, std::string filename);
+    void SweepBeamParameter2D(std::string parname1, int subparindx1, std::string parname2, int subparindx2, int nvals1, double lowval1, double highval1, int nvals2, double lowval2, double highval2, std::ostream &out);
+    TMatrixD SweepBeamParameter2D(std::string parname1, int subparindx1, std::string parname2, int subparindx2, int nvals1, double lowval1, double highval1, int nvals2, double lowval2, double highval2);
+  
 		void	CreateScalingParameter(std::vector<int>);				/*!< Add a scaling parameter, with common scaling experiments defined by their indices in a vector of int */
 
 		// Scaling parameters are common to both target and beam

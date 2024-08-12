@@ -75,6 +75,7 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 												expt_weights.resize(Nexpts);
 												std::fill(expt_weights.begin(),expt_weights.end(),1);
                         simanmin = NULL;
+                        integralAlways = 0;
 
 											}	/*!< Construct object with vector of experimental data to be fit */
 		virtual ~GOSIASimMinFCN()						{;					}
@@ -168,6 +169,7 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 		void	AddScalingParameter(ScalingParameter s)				{ scalingParameters.push_back(s);	}	/*!< Append a new ScalingParameter to the vector */
 		void	ClearScalingParameters()					{ scalingParameters.clear();		}	/*!< Clear the vector of ScalingParameter objects */
   void	AddBeamCorrectionFactor(TMatrixD);										/*!< Add beam point calculation correction factors (append) */
+  void	AddTargetCorrectionFactor(TMatrixD);										/*!< Add target point calculation correction factors (append) */
 
 		double 	up() const	 						{ return theErrorDef;			}	/*!< Required by ROOT::Minimizer */
 		double 	operator()(const double*);											/*!< Required by ROOT::Minimizer */
@@ -258,12 +260,12 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 		void	SetWeights(std::vector<float> v)				{ expt_weights = v;			}	
 		std::vector<float>	GetWeights()				const	{ return expt_weights;			}
 
-  void Gosia(int species, int verbosity); //run Gosia calculation
+  void Gosia(int species, int verbosity, int integral=0); //run Gosia calculation
   out_yields GetBeamYields() {   return beam_yields; }
   out_yields GetTargetYields() { return target_yields; }
 
   void SetSimAn(GOSIASimAnMinimizer *sam) { simanmin = sam; }
-  
+  void SetIntegralAlways(int ia) { integralAlways = ia; }
 
 	private :
 
@@ -313,6 +315,7 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 		TransitionRates			fRates;
 
 		int				verbosity;
+  int integralAlways;
 
 		int				nCalls;
 		int				nIterations;

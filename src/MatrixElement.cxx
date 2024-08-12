@@ -397,7 +397,7 @@ void RelMatWidthElement::Propagate(Nucleus &nucl,
 
   double wth_ref = 0;
   double Eg_ref = nucl.GetLevelEnergies()[initRef] - nucl.GetLevelEnergies()[finalRef];
-  int J_ref = nucl.GetLevelJ()[initRef];
+  double J_ref = nucl.GetLevelJ()[initRef];
   int sign = 0;
   for (int L=0; L<8; ++L) {
     double me = nucl.GetMatrixElements().at(L)[initRef][finalRef];
@@ -407,7 +407,12 @@ void RelMatWidthElement::Propagate(Nucleus &nucl,
     }
     wth_ref += 1./(multfactor[L] * std::pow(Eg_ref,-power[L]) / (me*me/(2*J_ref+1.)) / std::pow(100,nbarns[L]));
   }
-  double mat = mat_rel * std::sqrt(wth_ref * std::pow(10,-12)) * sign;
+
+  double wth = std::abs(mat_rel) * wth_ref;
+  sign = std::abs(mat_rel)/mat_rel * sign;
+  double Eg = std::abs(nucl.GetLevelEnergies()[initialState] - nucl.GetLevelEnergies()[finalState]);
+  double J = nucl.GetLevelJ()[initialState];
+  double mat = std::sqrt((multfactor[lambda]*std::pow(Eg, -power[lambda]))/((1./wth) * std::pow(100, nbarns[lambda])) * (2.*J + 1.)) * sign;
   nucl.SetMatrixElement(lambda, initialState, finalState, mat);
 }
 

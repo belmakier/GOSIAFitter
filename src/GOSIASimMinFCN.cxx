@@ -3,10 +3,12 @@
 
 void GOSIASimMinFCN::SetupCalculation(){
 
-	exptIndex.resize(exptData_Beam.size());
-	for(unsigned int i=0;i<scalingParameters.size();i++)
-		for(unsigned int s=0;s<scalingParameters.at(i).GetExperimentNumbers().size();s++)
+	exptIndex.resize(std::max(exptData_Beam.size(), exptData_Target.size()));
+	for(unsigned int i=0;i<scalingParameters.size();i++) {
+		for(unsigned int s=0;s<scalingParameters.at(i).GetExperimentNumbers().size();s++) {
 			exptIndex[scalingParameters.at(i).GetExperimentNumbers().at(s)] = (int)i;
+    }
+  }
 
   if (verbosity>1) {
     std::cout	<< std::setw(13) << std::left << "Experiment: "
@@ -368,7 +370,7 @@ double GOSIASimMinFCN::CompareYields(std::vector<ExperimentData> &exptData,
       sigma			/= expt_weights.at(i);
       sigma_prime		/= expt_weights.at(i);
       if (exptCounts == 0) { //treat as limit
-        double limit = exptData.at(i).GetData().at(t).GetUpUnc();
+        double limit = exptData.at(i).GetDoublet().at(t).GetUpUnc();
         if (calcCounts > limit) {
           exptCounts = 0.01;
         }
@@ -390,7 +392,7 @@ double GOSIASimMinFCN::CompareYields(std::vector<ExperimentData> &exptData,
                           << std::setw(14) << std::left << exptCounts 
                           << std::setw(14) << std::left << exptData.at(i).GetDoublet().at(t).GetUpUnc()
                           << std::setw(14) << std::left << calcCounts/exptCounts
-                          << std::setw(14) << std::left << TMath::Power((calcCounts - exptCounts)/exptData.at(i).GetData().at(t).GetUpUnc(),2);
+                          << std::setw(14) << std::left << TMath::Power((calcCounts - exptCounts)/exptData.at(i).GetDoublet().at(t).GetUpUnc(),2);
               if (print_ct%2 == 0) {
                 std::cout << std::setw(20) << std::left << " ";
                 if (t==exptData.at(i).GetDoublet().size()-1) { std::cout << std::endl; }
@@ -405,9 +407,9 @@ double GOSIASimMinFCN::CompareYields(std::vector<ExperimentData> &exptData,
         }
         else{
           if(calcCounts > exptCounts)
-            tmp 		= (calcCounts - exptCounts) / exptData.at(i).GetData().at(t).GetUpUnc();
+            tmp 		= (calcCounts - exptCounts) / exptData.at(i).GetDoublet().at(t).GetUpUnc();
           else
-            tmp 		= (calcCounts - exptCounts) / exptData.at(i).GetData().at(t).GetDnUnc();
+            tmp 		= (calcCounts - exptCounts) / exptData.at(i).GetDoublet().at(t).GetDnUnc();
           chisq		+= tmp * tmp;
           chisqspecies	+= tmp * tmp;
           exptchisq[i]	+= tmp * tmp;
@@ -428,7 +430,12 @@ double GOSIASimMinFCN::operator()(const double* par){
   if (simanmin) {
     if (simanmin->GetRecorr()) {
       CalcBeamCorrectionFactors();
+      CalcTargetCorrectionFactors();
     }
+  }
+  if (integralAlways) {
+    CalcBeamCorrectionFactors();
+    CalcTargetCorrectionFactors();
   }
   
 	double chisq = 0;
@@ -567,10 +574,9 @@ double GOSIASimMinFCN::operator()(const double* par){
 
   double litchisq = chisq;
   //	COULEX AND STUFF:
-
   int verb = 0;
-  Gosia(0,verb);
-  Gosia(1,verb);
+  Gosia(0,verb, 0);
+  Gosia(1,verb, 0);
 
   //RunGosia(beam_inputfile, workingDir, all_detectors, beam_me, beam_out, verbosity);
   //RunGosia(target_inputfile, workingDir, all_detectors, target_me, target_out, verbosity);
@@ -600,7 +606,7 @@ double GOSIASimMinFCN::operator()(const double* par){
 
   //fit optimal scaling factors
   std::vector<double>	scaling;
-  scaling.resize(exptData_Beam.size());
+  scaling.resize(std::max(exptData_Beam.size(), exptData_Target.size()));
   for(size_t s=0;s<scalingParameters.size();s++){
     scalingParameters.at(s).Fit(exptData_Beam, EffectiveCrossSection_Beam,
                                 exptData_Target, EffectiveCrossSection_Target,
@@ -704,19 +710,29 @@ void GOSIASimMinFCN::ClearAll() {
 
 }
 
-void GOSIASimMinFCN::Gosia(int species, int verbosity) {
+ void GOSIASimMinFCN::Gosia(int species, int verbosity, int integral) {
   int dirlen = (int)workingDir.size();
   if (species == 0) { //beam
-    Nucleus &nucl_b = fNucleus_Beam;	
+    Nucleus &nucl_b = fNucleus_Beam;
     for (int i=0; i<beamMapping_i.size(); ++i) {
       bst_me[i] = nucl_b.GetMatrixElements().at(beamMapping_l.at(i))[beamMapping_f.at(i)][beamMapping_i.at(i)];
     }
-    gosia_(&beam_inputfile,
-           workingDir.c_str(), dirlen,
-           &all_detectors,
-           &bst_me[0],
-           &beam_yields,
-           verbosity);
+    if (!integral) {
+      gosia_(&beam_inputfile,
+             workingDir.c_str(), dirlen,
+             &all_detectors,
+             &bst_me[0],
+             &beam_yields,
+             verbosity);
+    }
+    else {
+      gosia_(&beam_int_inputfile,
+             workingDir.c_str(), dirlen,
+             &all_detectors,
+             &bst_me[0],
+             &beam_yields,
+             verbosity);
+    }
   }
   else if (species == 1) { //target
     Nucleus &nucl_t = fNucleus_Target;	
@@ -724,12 +740,22 @@ void GOSIASimMinFCN::Gosia(int species, int verbosity) {
       bst_me[i] = nucl_t.GetMatrixElements().at(targetMapping_l.at(i))[targetMapping_f.at(i)][targetMapping_i.at(i)];
     }
 
-    gosia_(&target_inputfile,
-           workingDir.c_str(), dirlen,
-           &all_detectors,
-           &bst_me[0],
-           &target_yields,
-           verbosity);
+    if (!integral) {
+      gosia_(&target_inputfile,
+             workingDir.c_str(), dirlen,
+             &all_detectors,
+             &bst_me[0],
+             &target_yields,
+             verbosity);
+    }
+    else {
+      gosia_(&target_int_inputfile,
+             workingDir.c_str(), dirlen,
+             &all_detectors,
+             &bst_me[0],
+             &target_yields,
+             verbosity);
+    }
   }
 }
 
@@ -783,6 +809,59 @@ void GOSIASimMinFCN::CalcBeamCorrectionFactors() {
       }
     }
     AddBeamCorrectionFactor(tmpMat);
+  }
+}
+    
+void GOSIASimMinFCN::AddTargetCorrectionFactor(TMatrixD corrFac){
+	correctionFactors_Target.push_back(corrFac);
+}
+
+void GOSIASimMinFCN::CalcTargetCorrectionFactors() {
+    out_yields ptyields;
+    out_yields intyields;
+    int dirlen = workingDir.size();
+    for (int i=0; i<targetMapping_i.size(); ++i) {
+      bst_me[i] = fNucleus_Target.GetMatrixElements().at(targetMapping_l.at(i))[targetMapping_f.at(i)][targetMapping_i.at(i)];
+    }
+
+    gosia_(&target_inputfile,
+           workingDir.c_str(), dirlen,
+           &all_detectors,
+           &bst_me[0],
+           &ptyields,
+           verbosity);
+
+    gosia_(&target_int_inputfile,
+           workingDir.c_str(), dirlen,
+           &all_detectors,
+           &bst_me[0],
+           &intyields,
+           verbosity);
+
+    GOSIAReader gosiaReader_point(&fNucleus_Target, ptyields);
+    GOSIAReader gosiaReader_inti(&fNucleus_Target, intyields);
+
+  correctionFactors_Target.clear();
+  for(size_t e=0; e < gosiaReader_point.GetGOSIAData().size(); e++){	// Loop over experiments
+    size_t 		len = fNucleus_Target.GetNstates();
+		TMatrixD	tmpMat;
+		tmpMat.ResizeTo(len,len);
+    for(size_t ee=0; ee<gosiaReader_point.GetGOSIAData().at(e).GetData().size();ee++){
+      int	init = gosiaReader_inti.GetGOSIAData().at(e).GetDataPoint(ee).GetInitialIndex();
+      int	fina = gosiaReader_inti.GetGOSIAData().at(e).GetDataPoint(ee).GetFinalIndex();
+      double	point = gosiaReader_point.GetGOSIAData().at(e).GetDataPoint(ee).GetCounts();
+      double	inti = gosiaReader_inti.GetGOSIAData().at(e).GetDataPoint(ee).GetCounts();
+      //std::cout << point << "   " << inti << std::endl;
+      if(point > 1e-8){
+        tmpMat[init][fina] = inti/point;
+        tmpMat[fina][init] = inti/point;
+      }
+      else{
+        tmpMat[init][fina] = 0;
+        tmpMat[fina][init] = 0;
+      }
+    }
+    AddTargetCorrectionFactor(tmpMat);
   }
 }
     

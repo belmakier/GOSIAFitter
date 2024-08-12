@@ -621,7 +621,7 @@ C      type(out_det), dimension(32) :: dets;
       real*8 :: wthh
 
       integer*4 :: npoints
-      type(file14_unit_pt) :: meshpoints(4096)
+      type(file14_unit_pt), dimension(8192) :: meshpoints
       
       end type file14_unit_exp      
 
@@ -636,11 +636,11 @@ C      type(out_det), dimension(32) :: dets;
       sequence
 
       integer*4 :: npoints
-      integer*4, dimension(4096) :: lx
-      integer*4, dimension(4096) :: mpin
-      integer*4, dimension(4096) :: kloop
-      integer*4, dimension(4096) :: ktt
-      real*8, dimension(4096) :: dsx
+      integer*4, dimension(8192) :: lx
+      integer*4, dimension(8192) :: mpin
+      integer*4, dimension(8192) :: kloop
+      integer*4, dimension(8192) :: ktt
+      real*8, dimension(8192) :: dsx
 
       end type file17
       
@@ -2324,7 +2324,7 @@ C     &                                  dsx ,
 C     &                                (GRAD(jyi)*dsig*ax,jyi=1,idr)
                                  
                                  np = mesh%exps(lx)%npoints + 1
-                                 IF ( np.ge.4096 ) THEN
+                                 IF ( np.ge.8192 ) THEN
                                     WRITE(*,*)"SEVERE ERROR, TOO MANY"//
      &                                   "MESH POINTS"
                                  END IF                                 
@@ -3536,13 +3536,16 @@ C     Handle OP,ERRO
                            output%experiment(IEXP)%theta_low =
      &                          TLBDG(IEXP)
                            output%experiment(IEXP)%theta_high =
-     &                          TLBDG(IEXP)                        
+     &                          TLBDG(IEXP)
+                           output%experiment(IEXP)%ruth = DSIGS(IEXP)
 
                      ENDIF
                      jmm = 0
 C---- this bit removed in gosia2 start
                      ttttx = TLBDG(IEXP)/57.2957795
+C                     WRITE(*,*) IEXP, YGN(IDRN), dsig, ttttx, SIN(ttttx)
                      YGN(IDRN) = YGN(IDRN)*dsig*SIN(ttttx)
+
                      DO jyi = 1 , idr
                         IF ( jyi.NE.IDRN ) YGN(jyi) = YGN(jyi)
      &                       *dsig*SIN(ttttx)
@@ -12054,7 +12057,7 @@ C maps.
       real*8 :: wthh
 
       integer*4 :: npoints
-      type(file14_unit_pt) :: meshpoints(4096)
+      type(file14_unit_pt) :: meshpoints(8192)
       
       end type file14_unit_exp      
 
@@ -12092,7 +12095,7 @@ C maps.
 C     meshpoints indexing goes [energy][theta][detector]
 C     WRITE(*,*) "NMESHPOINTS = ", mesh%exps(Lx)%npoints
       if (Isko .ne. 0) then
-         IF ( Isko.ge.4096 ) THEN
+         IF ( Isko.ge.8192 ) THEN
             WRITE(*,*)"SEVERE ERROR, TOO MANY"//
      &           "MESH POINTS"
          END IF                                 
@@ -12106,7 +12109,7 @@ C     WRITE(*,*) "NMESHPOINTS = ", mesh%exps(Lx)%npoints
       na = mesh%exps(Lx)%jan1
 C     loop through theta meshpoints
       DO j = 1 , Nflr
-         IF ( Isko+(j-1)*na.ge.4096 ) THEN
+         IF ( Isko+(j-1)*na.ge.8192 ) THEN
             WRITE(*,*)"SEVERE ERROR, TOO MANY"//
      &           "MESH POINTS"
          END IF                                 

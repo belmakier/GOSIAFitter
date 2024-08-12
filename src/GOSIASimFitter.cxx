@@ -603,6 +603,321 @@ void GOSIASimFitter::DoFit(const char* method, const char *algorithm, ROOT::Math
 
 }
 
+
+void GOSIASimFitter::SweepBeamParameter(std::string parname, int subparindx, int nvals, double lowval, double highval, std::string filename) {
+  std::ofstream ofile(filename.c_str());
+  SweepBeamParameter(parname, subparindx, nvals, lowval, highval, ofile);
+  ofile.close();
+}
+
+void GOSIASimFitter::SweepBeamParameter(std::string parname, int subparindx, int nvals, double lowval, double highval, std::ostream &out) {
+  std::vector<double> chisqvals = SweepBeamParameter(parname, subparindx, nvals, lowval, highval);
+
+  for (int i=0; i<chisqvals.size(); ++i) {
+    out << i << "   " << lowval + (highval-lowval)/((double)nvals-1) * i << "    " << chisqvals[i] << std::endl;
+  }
+}
+
+std::vector<double> GOSIASimFitter::SweepBeamParameter(std::string parname, int subparindx, int nvals, double lowval, double highval) {
+  GOSIASimMinFCN theFCN(exptData_Beam,exptData_Target);
+
+  theFCN.SetWorkingDir(workingDir);
+	theFCN.SetBeamGOSIAInput(GetBeamGOSIAInput());
+	theFCN.SetBeamGOSIAOutput(GetBeamGOSIAOutput());
+	theFCN.SetTargetGOSIAInput(GetTargetGOSIAInput());
+	theFCN.SetTargetGOSIAOutput(GetTargetGOSIAOutput());
+	theFCN.SetBeamBST(GetBeamBST());
+	theFCN.SetTargetBST(GetTargetBST());
+	theFCN.SetBeamMapping(beamMapping_i,beamMapping_f,beamMapping_l);
+	theFCN.SetTargetMapping(targetMapping_i,targetMapping_f,targetMapping_l);
+
+  theFCN.SetBeamFittingElements(fittingElements_Beam);
+  theFCN.SetTargetFittingElements(fittingElements_Target);
+	theFCN.SetScalingParameters(scalingParameters);
+
+	theFCN.SetBeamLitLifetimes(litLifetimes_Beam);
+	theFCN.SetBeamLitBranching(litBranchingRatios_Beam);
+	theFCN.SetBeamLitMixing(litMixingRatios_Beam);	
+	theFCN.SetBeamLitMatrixElements(litMatrixElements_Beam);	
+	theFCN.SetTargetLitLifetimes(litLifetimes_Target);
+	theFCN.SetTargetLitBranching(litBranchingRatios_Target);
+	theFCN.SetTargetLitMixing(litMixingRatios_Target);	
+	theFCN.SetTargetLitMatrixElements(litMatrixElements_Target);	
+
+	theFCN.SetBeamNucleus(&fNucleus_Beam);
+	theFCN.SetTargetNucleus(&fNucleus_Target);
+
+	theFCN.SetBeamCorrectionFactors(correctionFactors_Beam);
+	theFCN.SetTargetCorrectionFactors(correctionFactors_Target);
+
+  theFCN.SetDetectors(all_detectors);
+  theFCN.SetInputFiles(beam_inputfile, target_inputfile);
+  theFCN.SetIntInputFiles(beam_int_inputfile, target_int_inputfile);
+  
+	theFCN.SetIter(maxIter);
+	theFCN.SetCalls(maxCalls);
+
+	theFCN.SetNthreads(nThreads);
+
+	theFCN.SetVerbosity(verbosity);
+
+	theFCN.SetupCalculation();
+
+	theFCN.SetLikelihoodFit(fLikelihood);
+
+  theFCN.SetIntegralAlways(1);
+
+	size_t	Nexpts = 0;
+	if(exptData_Beam.size() > exptData_Target.size())
+		Nexpts = exptData_Beam.size();
+	else
+		Nexpts = exptData_Target.size();
+
+	if(expt_weights.size() != Nexpts){
+		expt_weights.resize(Nexpts);
+		std::fill(expt_weights.begin(),expt_weights.end(),1);
+	}
+
+	theFCN.SetWeights(expt_weights);
+
+  int fe_indx = -1;
+  double orig_val = -1;
+  std::vector<std::string> names;
+	parameters.clear();
+	par_LL.clear();
+	par_UL.clear();
+  for (unsigned int i=0; i<fittingElements_Beam.size(); ++i) {
+    fittingElements_Beam[i]->Populate(parameters, par_LL, par_UL);
+    if (!fittingElements_Beam[i]->GetFixed()) {
+      if (fittingElements_Beam[i]->GetNPars() == 1) {
+        names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i));
+        if (!parname.compare(fittingElements_Beam[i]->GetName())) {
+          orig_val = fittingElements_Beam[i]->GetValue(subparindx);
+          fe_indx = names.size() - 1;
+        }
+      }
+      else {
+        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+        for (int j=0; j<fittingElements_Beam[i]->GetNPars(); ++j) {
+          names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
+          if (!parname.compare(fittingElements_Beam[i]->GetName()) && subparindx==j) {
+            orig_val = fittingElements_Beam[i]->GetValue(subparindx);
+            fe_indx = names.size() - 1;
+          }
+        }
+      }
+    }
+  }
+
+  for (unsigned int i=0; i<fittingElements_Target.size(); ++i) {
+    fittingElements_Target[i]->Populate(parameters, par_LL, par_UL);
+    if (!fittingElements_Target[i]->GetFixed()) {
+      if (fittingElements_Target[i]->GetNPars() == 1) {
+      names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i));
+      }
+      else {
+        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+        for (int j=0; j<fittingElements_Target[i]->GetNPars(); ++j) {
+          names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
+        }
+      }
+    }
+  }
+
+  if (verbosity > 0) {
+	for(unsigned int i=0;i<parameters.size();i++) {
+		std::cout 	<< std::setw(13) << std::left << parameters.at(i) 
+                << std::setw(4) << std::left << "";
+	}
+	std::cout << std::endl;
+  }
+  
+	theFCN.SetNpar(parameters.size());
+  
+  std::vector<double> chisqVals;
+  for (int i=0; i<nvals; ++i) {
+    double val = lowval + i*(highval-lowval)/((double)(nvals-1));
+    parameters[fe_indx] = val;
+    
+    chisqVals.push_back(theFCN(parameters.data()));
+  }
+
+  fittingElements_Beam[fe_indx]->SetValue(subparindx, orig_val);
+  
+  return chisqVals;
+  
+}
+
+void GOSIASimFitter::SweepBeamParameter2D(std::string parname1, int subparindx1, std::string parname2, int subparindx2, int nvals1, double lowval1, double highval1, int nvals2, double lowval2, double highval2, std::string filename) {
+  std::ofstream ofile(filename.c_str());
+  SweepBeamParameter2D(parname1, subparindx1, parname2, subparindx2, nvals1, lowval1, highval1, nvals2, lowval2, highval2, ofile);
+  ofile.close();
+}
+
+void GOSIASimFitter::SweepBeamParameter2D(std::string parname1, int subparindx1, std::string parname2, int subparindx2, int nvals1, double lowval1, double highval1, int nvals2, double lowval2, double highval2, std::ostream &out) {
+  TMatrixD chisqvals = SweepBeamParameter2D(parname1, subparindx1, parname2, subparindx2, nvals1, lowval1, highval1, nvals2, lowval2, highval2);
+
+  for (int i=0; i<chisqvals.GetNrows(); ++i) {
+    for (int j=0; j<chisqvals.GetNcols(); ++j) {
+      out << i << "   " << j << "   " <<
+        lowval1 + (highval1-lowval1)/((double)nvals1-1) * i << "    " <<
+        lowval2 + (highval2-lowval2)/((double)nvals2-1) * j << "    " <<
+        chisqvals[i][j] << std::endl;
+    }
+  }
+}
+
+TMatrixD GOSIASimFitter::SweepBeamParameter2D(std::string parname1, int subparindx1, std::string parname2, int subparindx2, int nvals1, double lowval1, double highval1, int nvals2, double lowval2, double highval2) {
+  GOSIASimMinFCN theFCN(exptData_Beam,exptData_Target);
+
+  theFCN.SetWorkingDir(workingDir);
+	theFCN.SetBeamGOSIAInput(GetBeamGOSIAInput());
+	theFCN.SetBeamGOSIAOutput(GetBeamGOSIAOutput());
+	theFCN.SetTargetGOSIAInput(GetTargetGOSIAInput());
+	theFCN.SetTargetGOSIAOutput(GetTargetGOSIAOutput());
+	theFCN.SetBeamBST(GetBeamBST());
+	theFCN.SetTargetBST(GetTargetBST());
+	theFCN.SetBeamMapping(beamMapping_i,beamMapping_f,beamMapping_l);
+	theFCN.SetTargetMapping(targetMapping_i,targetMapping_f,targetMapping_l);
+
+  theFCN.SetBeamFittingElements(fittingElements_Beam);
+  theFCN.SetTargetFittingElements(fittingElements_Target);
+	theFCN.SetScalingParameters(scalingParameters);
+
+	theFCN.SetBeamLitLifetimes(litLifetimes_Beam);
+	theFCN.SetBeamLitBranching(litBranchingRatios_Beam);
+	theFCN.SetBeamLitMixing(litMixingRatios_Beam);	
+	theFCN.SetBeamLitMatrixElements(litMatrixElements_Beam);	
+	theFCN.SetTargetLitLifetimes(litLifetimes_Target);
+	theFCN.SetTargetLitBranching(litBranchingRatios_Target);
+	theFCN.SetTargetLitMixing(litMixingRatios_Target);	
+	theFCN.SetTargetLitMatrixElements(litMatrixElements_Target);	
+
+	theFCN.SetBeamNucleus(&fNucleus_Beam);
+	theFCN.SetTargetNucleus(&fNucleus_Target);
+
+	theFCN.SetBeamCorrectionFactors(correctionFactors_Beam);
+	theFCN.SetTargetCorrectionFactors(correctionFactors_Target);
+
+  theFCN.SetDetectors(all_detectors);
+  theFCN.SetInputFiles(beam_inputfile, target_inputfile);
+  theFCN.SetIntInputFiles(beam_int_inputfile, target_int_inputfile);
+  
+	theFCN.SetIter(maxIter);
+	theFCN.SetCalls(maxCalls);
+
+	theFCN.SetNthreads(nThreads);
+
+	theFCN.SetVerbosity(verbosity);
+
+	theFCN.SetupCalculation();
+
+	theFCN.SetLikelihoodFit(fLikelihood);
+
+  theFCN.SetIntegralAlways(1);
+
+	size_t	Nexpts = 0;
+	if(exptData_Beam.size() > exptData_Target.size())
+		Nexpts = exptData_Beam.size();
+	else
+		Nexpts = exptData_Target.size();
+
+	if(expt_weights.size() != Nexpts){
+		expt_weights.resize(Nexpts);
+		std::fill(expt_weights.begin(),expt_weights.end(),1);
+	}
+
+	theFCN.SetWeights(expt_weights);
+
+  int fe_indx1 = -1;
+  double orig_val1 = -1;
+  int fe_indx2 = -1;
+  double orig_val2 = -1;
+  
+  std::vector<std::string> names;
+	parameters.clear();
+	par_LL.clear();
+	par_UL.clear();
+  for (unsigned int i=0; i<fittingElements_Beam.size(); ++i) {
+    fittingElements_Beam[i]->Populate(parameters, par_LL, par_UL);
+    if (!fittingElements_Beam[i]->GetFixed()) {
+      if (fittingElements_Beam[i]->GetNPars() == 1) {
+        names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i));
+        if (!parname1.compare(fittingElements_Beam[i]->GetName())) {
+          orig_val1 = fittingElements_Beam[i]->GetValue(subparindx1);
+          fe_indx1 = names.size() - 1;
+        }
+        if (!parname2.compare(fittingElements_Beam[i]->GetName())) {
+          orig_val2 = fittingElements_Beam[i]->GetValue(subparindx2);
+          fe_indx2 = names.size() - 1;
+        }
+        
+      }
+      else {
+        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+        for (int j=0; j<fittingElements_Beam[i]->GetNPars(); ++j) {
+          names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
+          if (!parname1.compare(fittingElements_Beam[i]->GetName()) && subparindx1==j) {
+            orig_val1 = fittingElements_Beam[i]->GetValue(subparindx1);
+            fe_indx1 = names.size() - 1;
+          }
+          if (!parname2.compare(fittingElements_Beam[i]->GetName()) && subparindx2==j) {
+            orig_val2 = fittingElements_Beam[i]->GetValue(subparindx2);
+            fe_indx2 = names.size() - 1;
+          }
+        }
+      }
+    }
+  }
+
+  for (unsigned int i=0; i<fittingElements_Target.size(); ++i) {
+    fittingElements_Target[i]->Populate(parameters, par_LL, par_UL);
+    if (!fittingElements_Target[i]->GetFixed()) {
+      if (fittingElements_Target[i]->GetNPars() == 1) {
+      names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i));
+      }
+      else {
+        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+        for (int j=0; j<fittingElements_Target[i]->GetNPars(); ++j) {
+          names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
+        }
+      }
+    }
+  }
+
+  if (verbosity > 0) {
+	for(unsigned int i=0;i<parameters.size();i++) {
+		std::cout 	<< std::setw(13) << std::left << parameters.at(i) 
+                << std::setw(4) << std::left << "";
+	}
+	std::cout << std::endl;
+  }
+  
+	theFCN.SetNpar(parameters.size());
+  
+  TMatrixD chisqVals;
+  chisqVals.ResizeTo(nvals1, nvals2);
+
+  for (int i=0; i<nvals1; ++i) {
+    double val1 = lowval1 + i*(highval1-lowval1)/((double)(nvals1-1));
+    for (int j=0; j<nvals2; ++j) {
+      double val2 = lowval2 + j*(highval2-lowval2)/((double)(nvals2-1));
+      
+      parameters[fe_indx1] = val1;
+      parameters[fe_indx2] = val2;
+    
+      chisqVals[i][j] = theFCN(parameters.data());
+    }
+  }
+
+  fittingElements_Beam[fe_indx1]->SetValue(subparindx1, orig_val1);
+  fittingElements_Beam[fe_indx2]->SetValue(subparindx2, orig_val2);
+  
+  return chisqVals;
+  
+}
+
+
 void GOSIASimFitter::CreateScalingParameter(std::vector<int> expnum){
 
 	ScalingParameter tmpScaling;
@@ -1371,7 +1686,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
       calcGraph2->AddPoint(i+1, calcCounts2);
       calcGraph->AddPoint(i+1, calcCounts1+calcCounts2);
       expGraph->AddPoint(i+1, exptCounts);
-      expGraph->SetPointError(expGraph->GetN()-1, 0, exptData.at(i).GetData().at(t).GetUpUnc());
+      expGraph->SetPointError(expGraph->GetN()-1, 0, exptData.at(i).GetDoublet().at(t).GetUpUnc());
 
       normCalcGraph->AddPoint(angles[i], calcCounts1/(scaling.at(i)*correctionFactors.at(i)[index_final1][index_init1]) + calcCounts2/(scaling.at(i)*correctionFactors.at(i)[index_final2][index_init2]));
 
@@ -1379,7 +1694,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
         ((scaling.at(i)*correctionFactors.at(i)[index_final1][index_init1]) * calcCounts2 + (scaling.at(i)*correctionFactors.at(i)[index_final2][index_init2]) * calcCounts1 ) * (calcCounts1 + calcCounts2);
       
       normExpGraph->AddPoint(angles[i], exptCounts/exptNorm);
-      normExpGraph->SetPointError(normExpGraph->GetN()-1, 0, exptData.at(i).GetData().at(t).GetUpUnc()/exptNorm);
+      normExpGraph->SetPointError(normExpGraph->GetN()-1, 0, exptData.at(i).GetDoublet().at(t).GetUpUnc()/exptNorm);
 
 		}
 	}
@@ -1428,7 +1743,7 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
   }
 
   std::vector<double>	scaling;
-  scaling.resize(exptData_Beam.size());
+  scaling.resize(std::max(exptData_Beam.size(), exptData_Target.size()));
   for(size_t s=0;s<scalingParameters.size();s++){
      scalingParameters.at(s).Fit(exptData_Beam, EffectiveCrossSection_Beam,
                                 exptData_Target, EffectiveCrossSection_Target,

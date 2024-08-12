@@ -96,7 +96,6 @@ void	GOSIAReader::ReadGOSIAFile(out_yields &gosia_yields){
   //std::cout << "Reading GOSIA output" << std::endl;
   for (int i=0; i<gosia_yields.nexp; ++i) {
     int nyields = gosia_yields.experiment[i].nyields;
-    //std::cout << "Exp: " << i << "  " << nyields << " yields" << std::endl;
     ExperimentData tmpExpt;
     for (int j=0; j<nyields; ++j) {
       int ni = gosia_yields.experiment[i].ni[j];
