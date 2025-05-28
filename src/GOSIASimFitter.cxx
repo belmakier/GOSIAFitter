@@ -31,6 +31,9 @@ GOSIASimFitter::GOSIASimFitter()
 
   workingDir = "./";
 
+  doBeamCalc = true;
+  doTargCalc = true;
+
 }
 
 GOSIASimFitter::GOSIASimFitter(const GOSIASimFitter& g) {
@@ -112,6 +115,9 @@ GOSIASimFitter::GOSIASimFitter(const GOSIASimFitter& g) {
 
   all_detectors = g.all_detectors;
 
+  doBeamCalc = g.doBeamCalc;
+  doTargCalc = g.doTargCalc;
+
 }
 GOSIASimFitter& GOSIASimFitter::operator = (const GOSIASimFitter& g){
 
@@ -191,6 +197,9 @@ GOSIASimFitter& GOSIASimFitter::operator = (const GOSIASimFitter& g){
 	expt_weights			= g.expt_weights;
 
   all_detectors = g.all_detectors;
+
+  doBeamCalc = g.doBeamCalc;
+  doTargCalc = g.doTargCalc;
 
 	return *this;
 
@@ -290,6 +299,9 @@ void GOSIASimFitter::DoFit(const char* method, const char *algorithm, ROOT::Math
 	theFCN.SetupCalculation();
 
 	theFCN.SetLikelihoodFit(fLikelihood);
+
+  theFCN.SetBeamCalc(doBeamCalc);
+  theFCN.SetTargCalc(doTargCalc);
 
 	size_t	Nexpts = 0;
 	if(exptData_Beam.size() > exptData_Target.size())
@@ -1422,7 +1434,7 @@ void GOSIASimFitter::ReadTargetFittingParameters(std::string filename) {
   fstream.close();
 }
 
-void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> norms, std::vector<double> &scaling, 
+void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> &scaling, 
                                       std::vector<TMatrixD> &EffectiveCrossSection, std::vector<TMatrixD> &correctionFactors,
                                       std::vector<ExperimentData> &exptData, std::string species) {
   
@@ -1701,43 +1713,43 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
   file->Write();  
 }
 
-void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, std::vector<double> norms) {
+void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles) {
   file->cd();
   UpdateMEs();
   std::vector<double> beam_mes = GetBeamMEs();
-  std::vector<double> target_mes = GetTargetMEs();
-  
   TransitionRates rates_b(&fNucleus_Beam);
-  TransitionRates rates_t(&fNucleus_Target);
-
-  RunGosia(beam_inputfile,
-           workingDir,
-           all_detectors,
-           beam_mes,
-           beam_yields,
-           0);
-
-  RunGosia(target_inputfile,
-           workingDir,
-           all_detectors,
-           target_mes,
-           target_yields,
-           0);
-  
-	GOSIAReader	beam_gosiaReader(&fNucleus_Beam, beam_yields);	//	Grab the GOSIA yields
-  GOSIAReader target_gosiaReader(&fNucleus_Target, target_yields);	//	Grab the GOSIA yields
-  
+  if (doBeamCalc) {
+    RunGosia(beam_inputfile,
+             workingDir,
+             all_detectors,
+             beam_mes,
+             beam_yields,
+             0);
+  }
+  GOSIAReader	beam_gosiaReader(&fNucleus_Beam, beam_yields);	//	Grab the GOSIA yields
   std::vector<ExperimentData>	beamCalc	= beam_gosiaReader.GetGOSIAData();
-  std::vector<ExperimentData>	targetCalc	= target_gosiaReader.GetGOSIAData();
-  EffectiveCrossSection_Beam.clear();	
-  EffectiveCrossSection_Target.clear();	
-
+  EffectiveCrossSection_Beam.clear();
   int dim_b = rates_b.GetBranchingRatios().GetNrows();
-  int dim_t = rates_t.GetBranchingRatios().GetNrows();
   for(size_t i=0; i<beamCalc.size(); i++){
     EffectiveCrossSection_Beam.push_back(beamCalc.at(i).GetEffectiveCrossSection(correctionFactors_Beam.at(i), dim_b));
   };
-  
+
+    
+  std::vector<double> target_mes = GetTargetMEs();  
+  TransitionRates rates_t(&fNucleus_Target);
+  if (doTargCalc) {
+    RunGosia(target_inputfile,
+             workingDir,
+             all_detectors,
+             target_mes,
+             target_yields,
+             0);
+  }
+  GOSIAReader target_gosiaReader(&fNucleus_Target, target_yields);	//	Grab the GOSIA yields 
+  std::vector<ExperimentData>	targetCalc	= target_gosiaReader.GetGOSIAData();
+  EffectiveCrossSection_Target.clear();	
+
+  int dim_t = rates_t.GetBranchingRatios().GetNrows();  
   for(size_t i=0; i<targetCalc.size(); i++){
     EffectiveCrossSection_Target.push_back(targetCalc.at(i).GetEffectiveCrossSection(correctionFactors_Target.at(i), dim_t));
   }
@@ -1749,14 +1761,18 @@ void GOSIASimFitter::WriteYieldGraphs(TFile *file, std::vector<double> angles, s
                                 exptData_Target, EffectiveCrossSection_Target,
                                 expt_weights, scaling);
   }
+  
+  if (doBeamCalc) {
+    WriteYieldGraphs(file, angles, scaling,
+                     EffectiveCrossSection_Beam, correctionFactors_Beam,
+                     exptData_Beam, "Beam");
+  }
 
-  WriteYieldGraphs(file, angles, norms, scaling,
-                   EffectiveCrossSection_Beam, correctionFactors_Beam,
-                   exptData_Beam, "Beam");
-
-  WriteYieldGraphs(file, angles, norms, scaling,
-                   EffectiveCrossSection_Target, correctionFactors_Target,
-                   exptData_Target, "Target");
+  if (doTargCalc) {
+    WriteYieldGraphs(file, angles, scaling,
+                     EffectiveCrossSection_Target, correctionFactors_Target,
+                     exptData_Target, "Target");
+  }
 
   file->Write();  
   
@@ -2036,5 +2052,13 @@ void GOSIASimFitter::Kick(int seed) {
   for (int i=0; i<fittingElements_Target.size(); ++i) {
     fittingElements_Target[i]->Kick(rand);
   }
-
 }
+
+
+  void GOSIASimFitter::SetBeamCalc(bool calc) {
+    doBeamCalc = calc;
+  }
+  
+  void GOSIASimFitter::SetTargCalc(bool calc) {
+    doTargCalc = calc;
+  }

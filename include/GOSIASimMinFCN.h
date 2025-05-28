@@ -76,6 +76,8 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 												std::fill(expt_weights.begin(),expt_weights.end(),1);
                         simanmin = NULL;
                         integralAlways = 0;
+                        doBeamCalc = true;
+                        doTargCalc = true;
 
 											}	/*!< Construct object with vector of experimental data to be fit */
 		virtual ~GOSIASimMinFCN()						{;					}
@@ -267,6 +269,9 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
   void SetSimAn(GOSIASimAnMinimizer *sam) { simanmin = sam; }
   void SetIntegralAlways(int ia) { integralAlways = ia; }
 
+  void SetBeamCalc(bool calc);
+  void SetTargCalc(bool calc);
+
 	private :
 
   std::string workingDir;
@@ -358,6 +363,9 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
   double bst_me[999];
 
   GOSIASimAnMinimizer *simanmin;
+
+  bool doBeamCalc;
+  bool doTargCalc;
   
 };
 

@@ -1189,7 +1189,7 @@ C     100  READ (input%lines(:,lct),99001) op1 , op2
  100  READ(input(lct),99001) op1 , op2
       lct=lct+1
 99001 FORMAT (1A3,1A4)
-      
+
       IF ( op1.EQ.'OP, ' ) THEN
          IF ( op2.EQ.'GOSI' ) oph = op2
          IF ( op2.EQ.'GOSI' ) opcja = op2

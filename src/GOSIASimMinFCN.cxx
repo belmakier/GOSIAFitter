@@ -575,8 +575,12 @@ double GOSIASimMinFCN::operator()(const double* par){
   double litchisq = chisq;
   //	COULEX AND STUFF:
   int verb = 0;
-  Gosia(0,verb, 0);
-  Gosia(1,verb, 0);
+  if (doBeamCalc) {
+    Gosia(0,verb, 0);
+  }
+  if (doTargCalc) {
+    Gosia(1,verb, 0);
+  }
 
   //RunGosia(beam_inputfile, workingDir, all_detectors, beam_me, beam_out, verbosity);
   //RunGosia(target_inputfile, workingDir, all_detectors, target_me, target_out, verbosity);
@@ -865,3 +869,10 @@ void GOSIASimMinFCN::CalcTargetCorrectionFactors() {
   }
 }
     
+void GOSIASimMinFCN::SetBeamCalc(bool calc) {
+  doBeamCalc = calc;
+}
+
+void GOSIASimMinFCN::SetTargCalc(bool calc) {
+  doTargCalc = calc;
+}
