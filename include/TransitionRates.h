@@ -39,6 +39,7 @@ class TransitionRates
     TVectorD	GetGammaLifetimes()			const			{ return StateGammaLifetimes;	}	/*!< Return a TVectorD of state lifetimes (ps) */	
 		TMatrixD	GetBranchingRatios()		const			{ return BranchingRatios;	}	/*!< Return a TVectorD of branching ratios */
 		TMatrixD	GetMixingRatios()		const			{ return MixingRatios;		}	/*!< Return a TMatrixD of mixing ratios (E/M) */
+		TMatrixD	GetGammaTransitionRates()		const			{ return SummedGammaTransitionStrengths;		}	/*!< Return a TMatrixD of mixing ratios (E/M) */
 
 		void		SetNucleus(Nucleus* nucl)	{ fNucleus = nucl; }	/*!< Define the nucleus (energies and matrix elements) */
 

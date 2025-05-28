@@ -473,8 +473,8 @@ double GOSIASimMinFCN::operator()(const double* par){
     std::cout << std::setw(4) << parct << " Parameters: ";
     int linect = 0;
     for (int i=0; i<FE_Beam.size(); ++i) {
-      if (FE_Beam[i]->GetFixed()) { continue; }
       for (int j=0; j<FE_Beam[i]->GetNPars(); ++j) {
+      if (FE_Beam[i]->GetFixed(j)) { continue; }
         std::cout << std::setw(10) << FE_Beam[i]->GetName()
                   << std::setw(1) << " "
                   << std::setw(7) << FE_Beam[i]->GetType()
@@ -491,8 +491,8 @@ double GOSIASimMinFCN::operator()(const double* par){
       }      
     }
     for (int i=0; i<FE_Target.size(); ++i) {
-      if (FE_Target[i]->GetFixed()) { continue; }
       for (int j=0; j<FE_Target[i]->GetNPars(); ++j) {
+      if (FE_Target[i]->GetFixed(j)) { continue; }
         std::cout << std::setw(10) << FE_Target[i]->GetName()
                   << std::setw(1) << " "
                   << std::setw(7) << FE_Target[i]->GetType()

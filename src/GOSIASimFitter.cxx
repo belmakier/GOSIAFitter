@@ -322,13 +322,13 @@ void GOSIASimFitter::DoFit(const char* method, const char *algorithm, ROOT::Math
 	par_UL.clear();
   for (unsigned int i=0; i<fittingElements_Beam.size(); ++i) {
     fittingElements_Beam[i]->Populate(parameters, par_LL, par_UL);
-    if (!fittingElements_Beam[i]->GetFixed()) {
-      if (fittingElements_Beam[i]->GetNPars() == 1) {
-        names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i));
-      }
-      else {
-        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
-        for (int j=0; j<fittingElements_Beam[i]->GetNPars(); ++j) {
+    std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+    for (int j=0; j<fittingElements_Beam[i]->GetNPars(); ++j) {
+      if (!fittingElements_Beam[i]->GetFixed(j)) {
+        if (fittingElements_Beam[i]->GetNPars() == 1) {
+          names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i));
+        }
+        else {
           names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
         }
       }
@@ -337,13 +337,13 @@ void GOSIASimFitter::DoFit(const char* method, const char *algorithm, ROOT::Math
 
   for (unsigned int i=0; i<fittingElements_Target.size(); ++i) {
     fittingElements_Target[i]->Populate(parameters, par_LL, par_UL);
-    if (!fittingElements_Target[i]->GetFixed()) {
-      if (fittingElements_Target[i]->GetNPars() == 1) {
-      names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i));
-      }
-      else {
-        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
-        for (int j=0; j<fittingElements_Target[i]->GetNPars(); ++j) {
+    std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+    for (int j=0; j<fittingElements_Target[i]->GetNPars(); ++j) {
+      if (!fittingElements_Target[i]->GetFixed(j)) {
+        if (fittingElements_Target[i]->GetNPars() == 1) {
+          names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i));
+        }
+        else {
           names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
         }
       }
@@ -700,17 +700,17 @@ std::vector<double> GOSIASimFitter::SweepBeamParameter(std::string parname, int 
 	par_UL.clear();
   for (unsigned int i=0; i<fittingElements_Beam.size(); ++i) {
     fittingElements_Beam[i]->Populate(parameters, par_LL, par_UL);
-    if (!fittingElements_Beam[i]->GetFixed()) {
-      if (fittingElements_Beam[i]->GetNPars() == 1) {
-        names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i));
-        if (!parname.compare(fittingElements_Beam[i]->GetName())) {
-          orig_val = fittingElements_Beam[i]->GetValue(subparindx);
-          fe_indx = names.size() - 1;
+    std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+    for (int j=0; j<fittingElements_Beam[i]->GetNPars(); ++j) {
+      if (!fittingElements_Beam[i]->GetFixed(j)) {
+        if (fittingElements_Beam[i]->GetNPars() == 1) {
+          names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i));
+          if (!parname.compare(fittingElements_Beam[i]->GetName())) {
+            orig_val = fittingElements_Beam[i]->GetValue(subparindx);
+            fe_indx = names.size() - 1;
+          }
         }
-      }
-      else {
-        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
-        for (int j=0; j<fittingElements_Beam[i]->GetNPars(); ++j) {
+        else {
           names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
           if (!parname.compare(fittingElements_Beam[i]->GetName()) && subparindx==j) {
             orig_val = fittingElements_Beam[i]->GetValue(subparindx);
@@ -723,13 +723,13 @@ std::vector<double> GOSIASimFitter::SweepBeamParameter(std::string parname, int 
 
   for (unsigned int i=0; i<fittingElements_Target.size(); ++i) {
     fittingElements_Target[i]->Populate(parameters, par_LL, par_UL);
-    if (!fittingElements_Target[i]->GetFixed()) {
-      if (fittingElements_Target[i]->GetNPars() == 1) {
-      names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i));
-      }
-      else {
-        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
-        for (int j=0; j<fittingElements_Target[i]->GetNPars(); ++j) {
+    std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+    for (int j=0; j<fittingElements_Target[i]->GetNPars(); ++j) {
+      if (!fittingElements_Target[i]->GetFixed(j)) {
+        if (fittingElements_Target[i]->GetNPars() == 1) {
+          names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i));
+        }
+        else {
           names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
         }
       }
@@ -852,22 +852,21 @@ TMatrixD GOSIASimFitter::SweepBeamParameter2D(std::string parname1, int subparin
 	par_UL.clear();
   for (unsigned int i=0; i<fittingElements_Beam.size(); ++i) {
     fittingElements_Beam[i]->Populate(parameters, par_LL, par_UL);
-    if (!fittingElements_Beam[i]->GetFixed()) {
-      if (fittingElements_Beam[i]->GetNPars() == 1) {
-        names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i));
-        if (!parname1.compare(fittingElements_Beam[i]->GetName())) {
-          orig_val1 = fittingElements_Beam[i]->GetValue(subparindx1);
-          fe_indx1 = names.size() - 1;
+    std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+    for (int j=0; j<fittingElements_Beam[i]->GetNPars(); ++j) {
+      if (!fittingElements_Beam[i]->GetFixed(j)) {
+        if (fittingElements_Beam[i]->GetNPars() == 1) {
+          names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i));
+          if (!parname1.compare(fittingElements_Beam[i]->GetName())) {
+            orig_val1 = fittingElements_Beam[i]->GetValue(subparindx1);
+            fe_indx1 = names.size() - 1;
+          }
+          if (!parname2.compare(fittingElements_Beam[i]->GetName())) {
+            orig_val2 = fittingElements_Beam[i]->GetValue(subparindx2);
+            fe_indx2 = names.size() - 1;
+          }
         }
-        if (!parname2.compare(fittingElements_Beam[i]->GetName())) {
-          orig_val2 = fittingElements_Beam[i]->GetValue(subparindx2);
-          fe_indx2 = names.size() - 1;
-        }
-        
-      }
-      else {
-        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
-        for (int j=0; j<fittingElements_Beam[i]->GetNPars(); ++j) {
+        else {
           names.push_back((std::string)"Beam-"+fittingElements_Beam[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
           if (!parname1.compare(fittingElements_Beam[i]->GetName()) && subparindx1==j) {
             orig_val1 = fittingElements_Beam[i]->GetValue(subparindx1);
@@ -884,13 +883,13 @@ TMatrixD GOSIASimFitter::SweepBeamParameter2D(std::string parname1, int subparin
 
   for (unsigned int i=0; i<fittingElements_Target.size(); ++i) {
     fittingElements_Target[i]->Populate(parameters, par_LL, par_UL);
-    if (!fittingElements_Target[i]->GetFixed()) {
-      if (fittingElements_Target[i]->GetNPars() == 1) {
-      names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i));
-      }
-      else {
-        std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
-        for (int j=0; j<fittingElements_Target[i]->GetNPars(); ++j) {
+    std::vector<std::string> alphabet = {"a","b","c","d","e","f","g","h","i","j"};
+    for (int j=0; j<fittingElements_Target[i]->GetNPars(); ++j) {
+      if (!fittingElements_Target[i]->GetFixed(j)) {
+        if (fittingElements_Target[i]->GetNPars() == 1) {
+          names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i));
+        }
+        else {
           names.push_back((std::string)"Targ-"+fittingElements_Target[i]->GetType()+"-"+std::to_string(i)+alphabet[j]);
         }
       }
@@ -957,50 +956,36 @@ void GOSIASimFitter::SetBeamFittingMatrixElement(std::string name, double ME, do
 }
 
 
-void GOSIASimFitter::AddBeamRelativeMatrixElement(std::string name, int lambda, int init,int fin,int lambda2,int init2,int fin2 ,double ME, double ME_LL, double ME_UL, bool fixed, bool relative, bool arctan) {
+void GOSIASimFitter::AddBeamRelativeMatrixElement(std::string name, int lambda, int init,int fin,int lambda2,int init2,int fin2 ,double ME, double ME_LL, double ME_UL, bool atan) {
   double rel = 1.0;
   double rel_ll = 1.0; 
   double rel_ul = 1.0;
-  if (relative == true ) {
-    rel = ME;
-    rel_ll = ME_LL;
-    rel_ul = ME_UL;
-  }
-  else {
-    if (arctan == false ) {
-      rel = ME/fNucleus_Beam.GetMatrixElements().at(lambda2 )[init2][fin2];
-      rel_ll = ME_LL/fNucleus_Beam.GetMatrixElements().at(lambda2)[init2][fin2];
-      rel_ul = ME_UL/fNucleus_Beam.GetMatrixElements().at(lambda2)[init2][fin2];
-    }
-    else {
-      rel = std::atan(ME/fNucleus_Beam.GetMatrixElements().at(lambda2 )[init2][fin2]);
-      rel_ll = std::atan(ME_LL/fNucleus_Beam.GetMatrixElements().at(lambda2)[init2][fin2]);
-      rel_ul = std::atan(ME_UL/fNucleus_Beam.GetMatrixElements().at(lambda2)[init2][fin2]);
-    }
-  }    
-  RelativeMatrixElement *tmpME = new RelativeMatrixElement(name, fittingElements_Beam.size(),lambda,init,fin,lambda2,init2,fin2,rel,rel_ll,rel_ul,fixed, arctan);
+  rel = ME;
+  rel_ll = ME_LL;
+  rel_ul = ME_UL;
+  RelativeMatrixElement *tmpME = new RelativeMatrixElement(name, fittingElements_Beam.size(),lambda,init,fin,lambda2,init2,fin2,rel,rel_ll,rel_ul, atan);
   fittingElements_Beam.push_back(tmpME);
 }
 
 void GOSIASimFitter::AddBeamLifetimeMixingElement(std::string name, int init, int fin, int l1, int l2, 
                                                        double wth, double wth_ll, double wth_ul,
-                                                       double mix, double mix_ll, double mix_ul, bool fix){
+                                                       double mix, double mix_ll, double mix_ul){
   LifetimeMixingElement *tmpFE = new LifetimeMixingElement(name,init,fin,l1,l2,
                                                            wth,wth_ll, wth_ul,
-                                                           mix,mix_ll,mix_ul,fix);
+                                                           mix,mix_ll,mix_ul);
   fittingElements_Beam.push_back(tmpFE);
 }
 
 void GOSIASimFitter::AddBeamRelLtMixElement(std::string name, int init, int fin, int l1, int l2, 
                                             double rel_wth, double rel_wth_ll, double rel_wth_ul,
                                             double mix, double mix_ll, double mix_ul,
-                                            int init_ref, int final_ref,
-                                            bool fix) {
+                                            int init_ref, int final_ref
+                                            ) {
   RelLtMixElement *tmpFE = new RelLtMixElement(name,init,fin,l1,l2,
                                                rel_wth,rel_wth_ll, rel_wth_ul,
                                                mix,mix_ll,mix_ul,
-                                               init_ref, final_ref,
-                                               fix);
+                                               init_ref, final_ref
+                                               );
   fittingElements_Beam.push_back(tmpFE);
 }
 
@@ -1032,28 +1017,14 @@ void GOSIASimFitter::AddTargetFittingMatrixElement(std::string name, int lambda,
   fittingElements_Target.push_back(tmpME);
 }
 
-void GOSIASimFitter::AddTargetRelativeMatrixElement(std::string name, int lambda, int init,int fin,int lambda2,int init2,int fin2 ,double ME, double ME_LL, double ME_UL, bool fixed, bool relative, bool arctan) {
+void GOSIASimFitter::AddTargetRelativeMatrixElement(std::string name, int lambda, int init,int fin,int lambda2,int init2,int fin2 ,double ME, double ME_LL, double ME_UL, bool atan ) {
   double rel = 1.0;
   double rel_ll = 1.0; 
   double rel_ul = 1.0;
-  if (relative == true ) {
-    rel = ME;
-    rel_ll = ME_LL;
-    rel_ul = ME_UL;
-  }
-  else {
-    if (arctan == false) {
-      rel = ME/fNucleus_Target.GetMatrixElements().at(lambda2)[init2][fin2];
-      rel_ll = ME_LL/fNucleus_Target.GetMatrixElements().at(lambda2)[init2][fin2];
-      rel_ul = ME_UL/fNucleus_Target.GetMatrixElements().at(lambda2)[init2][fin2];
-    }
-    else {
-      rel = std::atan(ME/fNucleus_Target.GetMatrixElements().at(lambda2)[init2][fin2]);
-      rel_ll = std::atan(ME_LL/fNucleus_Target.GetMatrixElements().at(lambda2)[init2][fin2]);
-      rel_ul = std::atan(ME_UL/fNucleus_Target.GetMatrixElements().at(lambda2)[init2][fin2]);
-    }
-  }    
-  RelativeMatrixElement *tmpME = new RelativeMatrixElement(name, fittingElements_Target.size(),lambda,init,fin,lambda2,init2,fin2,rel,rel_ll,rel_ul,fixed, arctan);
+  rel = ME;
+  rel_ll = ME_LL;
+  rel_ul = ME_UL;
+  RelativeMatrixElement *tmpME = new RelativeMatrixElement(name, fittingElements_Target.size(),lambda,init,fin,lambda2,init2,fin2,rel,rel_ll,rel_ul, atan);
   fittingElements_Target.push_back(tmpME);
 }
 
@@ -1810,18 +1781,18 @@ void GOSIASimFitter::UnFixAllBeamFittingElements() {
   }
 }
 
-void GOSIASimFitter::FixBeamFittingElement(std::string name) {
+void GOSIASimFitter::FixBeamFittingElement(std::string name, int indx) {
   for (int j=0; j<fittingElements_Beam.size(); ++j) {
     if (!fittingElements_Beam[j]->GetName().compare(name)) {
-      fittingElements_Beam[j]->SetFixed(true);
+      fittingElements_Beam[j]->SetFixed(indx, true);
     }
   }
 }
 
-void GOSIASimFitter::UnFixBeamFittingElement(std::string name) {
+void GOSIASimFitter::UnFixBeamFittingElement(std::string name, int indx) {
   for (int j=0; j<fittingElements_Beam.size(); ++j) {
     if (!fittingElements_Beam[j]->GetName().compare(name)) {
-      fittingElements_Beam[j]->SetFixed(false);
+      fittingElements_Beam[j]->SetFixed(indx, false);
     }
   }
 }
@@ -1846,18 +1817,18 @@ void GOSIASimFitter::UnFixBeamFittingElements(std::vector<std::string> names) {
   }
 }
 
-void GOSIASimFitter::FixTargetFittingElement(std::string name) {
+void GOSIASimFitter::FixTargetFittingElement(std::string name, int indx) {
   for (int j=0; j<fittingElements_Target.size(); ++j) {
     if (!fittingElements_Target[j]->GetName().compare(name)) {
-      fittingElements_Target[j]->SetFixed(true);
+      fittingElements_Target[j]->SetFixed(indx, true);
     }
   }
 }
 
-void GOSIASimFitter::UnFixTargetFittingElement(std::string name) {
+void GOSIASimFitter::UnFixTargetFittingElement(std::string name, int indx) {
   for (int j=0; j<fittingElements_Target.size(); ++j) {
     if (!fittingElements_Target[j]->GetName().compare(name)) {
-      fittingElements_Target[j]->SetFixed(false);
+      fittingElements_Target[j]->SetFixed(indx, false);
     }
   }
 }
@@ -2055,10 +2026,88 @@ void GOSIASimFitter::Kick(int seed) {
 }
 
 
-  void GOSIASimFitter::SetBeamCalc(bool calc) {
-    doBeamCalc = calc;
+void GOSIASimFitter::SetBeamCalc(bool calc) {
+  doBeamCalc = calc;
+}
+
+void GOSIASimFitter::SetTargCalc(bool calc) {
+  doTargCalc = calc;
+}
+
+void GOSIASimFitter::WriteBeamJSON(std::ostream &out, double sum, double time) {
+  //Writes a snapshot of the nucleus as it currently stands to an output stream as a JSON
+  UpdateMEs();
+  std::vector<std::string> mults={"E1","E2","E3","E4","E5","E6","M1","M2"};
+  out << "{"; 
+  out << "\"chi2\":" << GetFitChisq() << ", ";
+  out << "\"sum\":" << sum << ", ";
+  out << "\"time\":" << time << ", ";
+  std::vector<int> trans_i;
+  std::vector<int> trans_f;
+  std::vector<std::vector<int>> trans_l;
+  std::vector<int> trans_delt;
+  TransitionRates rates(&fNucleus_Beam);
+  for (int i=0; i<beamMapping_i.size(); ++i) {
+    //Matrix elements
+    int l=beamMapping_l[i];
+    int init=beamMapping_i[i];
+    int fin=beamMapping_f[i];
+    std::string name=mults[l]+"_"+std::to_string(fin)+"_"+std::to_string(init);
+    double val = fNucleus_Beam.GetMatrixElements().at(l)[fin][init]; 
+    out << "\"" << name << "\":" << val << ", ";
+    //Add to list of valid transitions
+    bool found = false;
+    for (int j=0; j<trans_i.size(); ++j) { if (trans_i[j] == init && trans_f[j] == fin) {
+        trans_l[j].push_back(l);
+	found = true;
+	break;
+      }	
+    } 
+    if (found == false) {
+      trans_i.push_back(init);
+      trans_f.push_back(fin);
+      trans_l.push_back({l});
+    }
   }
-  
-  void GOSIASimFitter::SetTargCalc(bool calc) {
-    doTargCalc = calc;
+  for (int i=0; i<fittingElements_Beam.size(); ++i) {
+    //Fitting elements
+    for (int j=0; j<fittingElements_Beam[i]->GetNPars(); ++j) {
+      std::string name = "FE_"+fittingElements_Beam[i]->GetName();
+      if (fittingElements_Beam[i]->GetNPars() > 1) {
+	 name += "_"+std::to_string(j);
+      }
+      double val = fittingElements_Beam[i]->GetValue(j);
+      out << "\"" << name << "\":" << val << ", ";
+    }
   }
+  for (int i=0; i<trans_i.size(); ++i) {
+    std::string name = "Width_"+std::to_string(trans_f[i])+"_"+std::to_string(trans_i[i]);
+    double val = rates.GetGammaTransitionRates()[trans_i[i]][trans_f[i]]*1e-12;
+    out << "\"" << name << "\":" << val << ", ";
+  }
+  for (int i=0; i<trans_i.size(); ++i) {
+    //transitions
+    if (trans_l[i].size() < 2) { continue; }
+    int found_E2 = -1;
+    int found_M1 = -1;
+    for (int j=0; j<trans_l[i].size(); ++j) {
+      if (trans_l[i][j] == 1) { found_E2 = j; }
+      if (trans_l[i][j] == 6) { found_M1 = j; }
+    }
+    if (!(found_E2 >= 0 && found_M1 >= 0)) { continue; }
+    std::string name = "Delta_"+std::to_string(trans_f[i])+"_"+std::to_string(trans_i[i]);
+    double val = rates.GetMixingRatios()[trans_i[i]][trans_f[i]];
+    out << "\"" << name << "\":" << val << ", ";
+  }
+  for (int i=1; i<fNucleus_Beam.GetNstates(); ++i) {
+    //State lifetimes
+    std::string name = "Lifetime_"+std::to_string(i);
+    double val = rates.GetLifetimes()[i];
+    out << "\"" << name << "\":" << val;
+    if (i<fNucleus_Beam.GetNstates()-1) {
+      out << ", ";
+    }
+  }
+  out << "}";
+}
+

@@ -32,7 +32,7 @@ void MatrixElement::Print(std::ostream &out) const {
 }
 
 void MatrixElement::Kick(TRandom3 &rand) {
-  if (GetFixed()) { return; }
+  if (GetFixed(0)) { return; }
   double newme;
   if (GetMatrixElementUpperLimit() * GetMatrixElementLowerLimit() < 0) {
     newme = rand.Gaus(GetMatrixElement(), std::max(std::abs(GetMatrixElementLowerLimit()),
@@ -54,7 +54,7 @@ void MatrixElement::Kick(TRandom3 &rand) {
 void MatrixElement::Propagate(Nucleus &nucl,
                               const double *par, int &parct,
                               int opt) {  
-  if (GetFixed() || opt) {
+  if (GetFixed(0) || opt) {
     nucl.SetMatrixElement(GetLambda(),
                           GetInitialState(),
                           GetFinalState(),
@@ -71,7 +71,7 @@ void MatrixElement::Propagate(Nucleus &nucl,
 }
 
 void MatrixElement::Update(const double *res, int &parct) {
-  if (GetFixed() ) { return; } 
+  if (GetFixed(0) ) { return; } 
   SetMatrixElement(res[parct]);
   ++parct;
 }
@@ -79,7 +79,7 @@ void MatrixElement::Update(const double *res, int &parct) {
 void MatrixElement::Populate(std::vector<double> &parameters,
                              std::vector<double> &par_LL,
                              std::vector<double> &par_UL) {
-  if (!GetFixed()) {
+  if (!GetFixed(0)) {
     parameters.push_back(GetMatrixElement());
     par_LL.push_back(GetMatrixElementLowerLimit());
     par_UL.push_back(GetMatrixElementUpperLimit());
@@ -127,7 +127,7 @@ void RelativeMatrixElement::Print(std::ostream &out) const {
 }
 
 void RelativeMatrixElement::Kick(TRandom3 &rand) {
-  if (GetFixed()) { return; }
+  if (GetFixed(0)) { return; }
   double newme;
   if (GetRelativeElementUpperLimit() * GetRelativeElementLowerLimit() < 0) {
     newme = rand.Gaus(GetRelativeElement(), std::max(std::abs(GetRelativeElementLowerLimit()),
@@ -151,7 +151,7 @@ void RelativeMatrixElement::Propagate(Nucleus &nucl,
                                       int opt) {
   double me = nucl.GetMatrixElements().at(GetLambdaRel())[GetInitialStateRel()][GetFinalStateRel()];
   
-  if (GetFixed() || opt) {
+  if (GetFixed(0) || opt) {
     if (GetArcTan()) {
       me = me * std::tan(GetRelativeElement());
     }
@@ -173,7 +173,7 @@ void RelativeMatrixElement::Propagate(Nucleus &nucl,
 }
 
 void RelativeMatrixElement::Update(const double *res, int &parct) {
-  if (GetFixed() ) { return; } 
+  if (GetFixed(0) ) { return; } 
   SetRelativeElement(res[parct]);
   ++parct;
 }
@@ -181,7 +181,7 @@ void RelativeMatrixElement::Update(const double *res, int &parct) {
 void RelativeMatrixElement::Populate(std::vector<double> &parameters,
                                std::vector<double> &par_LL,
                                std::vector<double> &par_UL) {
-    if (!GetFixed()) {
+    if (!GetFixed(0)) {
       parameters.push_back(GetRelativeElement());
       par_LL.push_back(GetRelativeElementLowerLimit());
       par_UL.push_back(GetRelativeElementUpperLimit());
@@ -198,14 +198,25 @@ void LifetimeMixingElement::Propagate(Nucleus &nucl,
   indx = parct;
   double wth;
   double delt;  
-  if (GetFixed() || opt) {
+  if (opt) {
     wth = width;
     delt = mixingRatio;
   }
   else {
-    wth = par[parct];
-    delt = par[parct+1];
-    parct += 2;
+    if (GetFixed(0)) {
+       wth = width;
+    }
+    else {
+       wth = par[parct];
+       parct += 1;
+    }
+    if (GetFixed(1)) {
+       delt = mixingRatio;
+    }
+    else {
+       delt = par[parct];
+       parct += 1;
+    }
   }
 
   double Egamma = nucl.GetLevelEnergies()[initialState] - nucl.GetLevelEnergies()[finalState];
@@ -232,20 +243,27 @@ void LifetimeMixingElement::Propagate(Nucleus &nucl,
 }
 
 void LifetimeMixingElement::Update(const double *res, int &parct) {
-  if (GetFixed()) { return; } 
-  SetWidth(res[parct]);
-  SetMixingRatio(res[parct+1]);
-  parct += 2;
+  if (GetFixed(0) && GetFixed(1)) { return; } 
+  if (!GetFixed(0)) {
+    SetWidth(res[parct]);
+    parct += 1;
+  }
+  if (!GetFixed(1)) {
+    SetMixingRatio(res[parct]);
+    parct += 1;
+  }
 }
 
 void LifetimeMixingElement::Populate(std::vector<double> &parameters,
                                std::vector<double> &par_LL,
                                std::vector<double> &par_UL) {
-    if (!GetFixed()) {
+    if (!GetFixed(0)) {
       parameters.push_back(GetWidth());
       par_LL.push_back(GetWidthLowerLimit());
       par_UL.push_back(GetWidthUpperLimit());
+    }
 
+    if (!GetFixed(1)) {
       parameters.push_back(GetMixingRatio());
       par_LL.push_back(GetMixingRatioLowerLimit());
       par_UL.push_back(GetMixingRatioUpperLimit());
@@ -257,7 +275,8 @@ void LifetimeMixingElement::Print(std::ostream &out) const {
 }
 
 void LifetimeMixingElement::Kick(TRandom3 &rand) {
-  if (GetFixed()) { return; }
+  if (GetFixed(0) && GetFixed(1)) { return; }
+  if (!GetFixed(0)) {
   double newwidth;
   if (GetWidthUpperLimit() * GetWidthLowerLimit() < 0) {    
     newwidth = rand.Gaus(GetWidth(), std::max(std::abs(GetWidthLowerLimit()), std::abs(GetWidthUpperLimit()))/4.);
@@ -269,16 +288,20 @@ void LifetimeMixingElement::Kick(TRandom3 &rand) {
   else {
     newwidth = rand.Gaus(GetWidth(), (GetWidthLowerLimit() - GetWidthUpperLimit())/4.);
   }
-  double newmix = rand.Gaus(GetMixingRatio(), (GetMixingRatioLowerLimit() - GetMixingRatioUpperLimit())/4.);
-  
   if (newwidth > GetWidthUpperLimit()) { newwidth = GetWidthUpperLimit(); }
   if (newwidth < GetWidthLowerLimit()) { newwidth = GetWidthLowerLimit(); }
+  SetWidth(newwidth);
+  }
+
+  if (!GetFixed(1)) {
+  double newmix = rand.Gaus(GetMixingRatio(), (GetMixingRatioLowerLimit() - GetMixingRatioUpperLimit())/4.);
+  
 
   if (newmix > GetMixingRatioUpperLimit()) { newmix = GetMixingRatioUpperLimit(); }
   if (newmix < GetMixingRatioLowerLimit()) { newmix = GetMixingRatioLowerLimit(); }
   
-  SetWidth(newwidth);
   SetMixingRatio(newmix);
+  }
 }
 
 void RelLtMixElement::Propagate(Nucleus &nucl,
@@ -291,14 +314,25 @@ void RelLtMixElement::Propagate(Nucleus &nucl,
   indx = parct;
   double wth_rel;
   double delt;  
-  if (GetFixed() || opt) {
+  if (opt) {
     wth_rel = widthRel;
     delt = mixingRatio;
   }
   else {
-    wth_rel = par[parct];
-    delt = par[parct+1];
-    parct += 2;
+    if (GetFixed(0)) {
+      wth_rel = widthRel;
+    }
+    else {
+      wth_rel = par[parct];
+      parct += 1;
+    }
+    if (GetFixed(1)) {
+      delt = mixingRatio;
+    }
+    else {
+      delt = par[parct];
+      parct += 1;
+    }
   }
 
   double wth_ref = 0;
@@ -334,20 +368,26 @@ void RelLtMixElement::Propagate(Nucleus &nucl,
 }
 
 void RelLtMixElement::Update(const double *res, int &parct) {
-  if (GetFixed()) { return; } 
-  SetWidthRel(res[parct]);
-  SetMixingRatio(res[parct+1]);
-  parct += 2;
+  if (GetFixed(0) && GetFixed(1)) { return; } 
+  if (!GetFixed(0)) {
+    SetWidthRel(res[parct]);
+    parct += 1;
+  }
+  if (!GetFixed(1)) {
+    SetMixingRatio(res[parct]);
+    parct += 1;
+  }
 }
 
 void RelLtMixElement::Populate(std::vector<double> &parameters,
                                std::vector<double> &par_LL,
                                std::vector<double> &par_UL) {
-    if (!GetFixed()) {
+    if (!GetFixed(0)) {
       parameters.push_back(GetWidthRel());
       par_LL.push_back(GetWidthRelLowerLimit());
       par_UL.push_back(GetWidthRelUpperLimit());
-
+   }
+   if (!GetFixed(1)) {
       parameters.push_back(GetMixingRatio());
       par_LL.push_back(GetMixingRatioLowerLimit());
       par_UL.push_back(GetMixingRatioUpperLimit());
@@ -359,7 +399,8 @@ void RelLtMixElement::Print(std::ostream &out) const {
 }
 
 void RelLtMixElement::Kick(TRandom3 &rand) {
-  if (GetFixed()) { return; }
+  if (GetFixed(0) && GetFixed(1)) { return; }
+  if (!GetFixed(0)) {
   double newwidth;
   if (GetWidthRelUpperLimit() * GetWidthRelLowerLimit() < 0) {    
     newwidth = rand.Gaus(GetWidthRel(), std::max(std::abs(GetWidthRelLowerLimit()), std::abs(GetWidthRelUpperLimit()))/4.);
@@ -371,23 +412,26 @@ void RelLtMixElement::Kick(TRandom3 &rand) {
   else {
     newwidth = rand.Gaus(GetWidthRel(), (GetWidthRelLowerLimit() - GetWidthRelUpperLimit())/4.);
   }
-  double newmix = rand.Gaus(GetMixingRatio(), (GetMixingRatioLowerLimit() - GetMixingRatioUpperLimit())/4.);
-  
   if (newwidth > GetWidthRelUpperLimit()) { newwidth = GetWidthRelUpperLimit(); }
   if (newwidth < GetWidthRelLowerLimit()) { newwidth = GetWidthRelLowerLimit(); }
+  SetWidthRel(newwidth);
+  }
+  if (!GetFixed(1)) {
+  double newmix = rand.Gaus(GetMixingRatio(), (GetMixingRatioLowerLimit() - GetMixingRatioUpperLimit())/4.);
+  
 
   if (newmix > GetMixingRatioUpperLimit()) { newmix = GetMixingRatioUpperLimit(); }
   if (newmix < GetMixingRatioLowerLimit()) { newmix = GetMixingRatioLowerLimit(); }
   
-  SetWidthRel(newwidth);
   SetMixingRatio(newmix);
+  }
 }
 
 void RelMatWidthElement::Propagate(Nucleus &nucl,
                                    const double *par, int &parct, int opt) {
   indx = parct;
   double mat_rel;
-  if (GetFixed() || opt) {
+  if (GetFixed(0) || opt) {
     mat_rel = matRel;
   }
   else {
@@ -411,13 +455,18 @@ void RelMatWidthElement::Propagate(Nucleus &nucl,
   double wth = std::abs(mat_rel) * wth_ref;
   sign = std::abs(mat_rel)/mat_rel * sign;
   double Eg = std::abs(nucl.GetLevelEnergies()[initialState] - nucl.GetLevelEnergies()[finalState]);
-  double J = nucl.GetLevelJ()[initialState];
+  int topState = -1;
+  if (nucl.GetLevelEnergies()[initialState] > nucl.GetLevelEnergies()[finalState]) {
+     topState = initialState;
+  }
+  else { topState = finalState; }
+  double J = nucl.GetLevelJ()[topState];
   double mat = std::sqrt((multfactor[lambda]*std::pow(Eg, -power[lambda]))/((1./wth) * std::pow(100, nbarns[lambda])) * (2.*J + 1.)) * sign;
   nucl.SetMatrixElement(lambda, initialState, finalState, mat);
 }
 
 void RelMatWidthElement::Update(const double *res, int &parct) {
-  if (GetFixed()) { return; } 
+  if (GetFixed(0)) { return; } 
   SetMatRel(res[parct]);
   parct += 1;
 }
@@ -425,7 +474,7 @@ void RelMatWidthElement::Update(const double *res, int &parct) {
 void RelMatWidthElement::Populate(std::vector<double> &parameters,
                                std::vector<double> &par_LL,
                                std::vector<double> &par_UL) {
-    if (!GetFixed()) {
+    if (!GetFixed(0)) {
       parameters.push_back(GetMatRel());
       par_LL.push_back(GetMatRelLowerLimit());
       par_UL.push_back(GetMatRelUpperLimit());
@@ -437,7 +486,7 @@ void RelMatWidthElement::Print(std::ostream &out) const {
 }
 
 void RelMatWidthElement::Kick(TRandom3 &rand) {
-  if (GetFixed()) { return; }
+  if (GetFixed(0)) { return; }
   double newmat;
   if (GetMatRelUpperLimit() * GetMatRelLowerLimit() < 0) {    
     newmat = rand.Gaus(GetMatRel(), std::max(std::abs(GetMatRelLowerLimit()), std::abs(GetMatRelUpperLimit()))/4.);

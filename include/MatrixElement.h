@@ -12,10 +12,12 @@ class FittingElement {
 public:
   FittingElement() {;}
   FittingElement(std::string t, std::string n,
-                 bool f, int np) {
+                 int np) {
     type = t;
     name = n;
-    fixed = f;
+    for (int i=0; i<np; ++i) {
+      fixed.push_back(0);
+    }
     npars = np;
   }
   virtual ~FittingElement() {};
@@ -30,8 +32,9 @@ public:
   virtual void Print(std::ostream &out) const = 0;
   virtual double GetValue(int i) const = 0; //this returns the ith parameter value
   virtual void SetValue(int i, double par) = 0; //set the ith parameter value
-  bool GetFixed() const { return fixed; }
-  void SetFixed(bool f) { fixed = f; }
+  bool GetFixed(int i) const { return fixed[i]; }
+  void SetFixed(int i, bool f) { fixed[i] = f; }
+  void SetFixed(bool f) { for (int i=0; i<npars; ++i) { fixed[i] = f; } }
   int GetIndex() const { return indx; }
   void SetIndex(int i) { indx = i; }
 
@@ -40,7 +43,7 @@ public:
   int GetNPars() const { return npars; }
 protected:
   int indx;
-  bool fixed;
+  std::vector<bool> fixed;
   std::string type;
   std::string name; // unique identifier
   int npars;
@@ -57,7 +60,7 @@ class MatrixElement : public FittingElement {
 public:
   MatrixElement()	{;}
   MatrixElement (std::string name, int i, int l, int s1, int s2, double me, double mell, double meul, bool fx=false)
-    : FittingElement("ME", name, false,1) {
+    : FittingElement("ME", name,1) {
 									 	index 			= i; 
 										lambda 			= l; 
 										initialstate 		= s1; 
@@ -65,7 +68,7 @@ public:
 										matrixElement 		= me;	
 										matrixElement_ll 	= mell;
 										matrixElement_ul 	= meul;
-                    fixed=fx;
+                    SetFixed(0,fx);
 		}							/*!< Construct matrix element me, of index i, multipolarity l, between states s1 and s2 with lower and upper limits of mell and meul  */
 		~MatrixElement() {;}
 		MatrixElement& operator = (const MatrixElement& m);	/*!< Assignment operator */
@@ -84,7 +87,6 @@ public:
 		void	SetMatrixElement(double ME)				{ matrixElement = ME;		}	/*!< Define matrix element value */
 		void	SetMatrixElementLowerLimit(double ME_LL)		{ matrixElement_ll = ME_LL;	}	/*!< Define matrix element lower limit */
 		void	SetMatrixElementUpperLimit(double ME_UL)		{ matrixElement_ul = ME_UL;	}	/*!< Define matrix element upper limit */
-    void SetFixed(bool f) { fixed = f; }
 		double 	GetMatrixElement() const				{ return matrixElement;		}	/*!< Return matrix element value */
 		double	GetMatrixElementLowerLimit() const			{ return matrixElement_ll;	}	/*!< Return matrix element lower limit */
 		double 	GetMatrixElementUpperLimit() const			{ return matrixElement_ul;	}	/*!< Return matrix element upper limit */
@@ -137,7 +139,7 @@ class RelativeMatrixElement : public FittingElement {
 	public:
 		RelativeMatrixElement()	{;}
   RelativeMatrixElement(std::string name, int i, int l, int s1, int s2, int l2, int s12, int s22, double r, double rll, double rul, bool fx=false, bool at=false) :
-    FittingElement("RelME",name, fx,1) {
+    FittingElement("RelME",name,1) {
       index 			= i; 
       lambda 			= l; 
       initialstate 		= s1; 
@@ -148,7 +150,7 @@ class RelativeMatrixElement : public FittingElement {
       rel = r;
       relll = rll;
       relul = rul;
-      fixed = fx;
+      fixed[0] = fx;
       arctan = at;
 		}							/*!< Construct matrix element me, of index i, multipolarity l, between states s1 and s2 with lower and upper limits of mell and meul  */
 		~RelativeMatrixElement() {;}
@@ -166,7 +168,7 @@ class RelativeMatrixElement : public FittingElement {
       rel = r;
       relll = rll;
       relul = rul;
-      fixed = fx;
+      fixed[0] = fx;
       arctan = at;
 		}							/*!< Define matrix element me, of index i, multipolarity l, between states s1 and s2 with lower and upper limits of mell and meul  */
 		void	SetRelativeElement(double r)				{ rel = r;		}	/*!< Define matrix element value */
@@ -183,8 +185,6 @@ class RelativeMatrixElement : public FittingElement {
   	int 	  GetLambdaRel() const 					{ return lambdaRel;		}	/*!< Return matrix element mulitpolarity */
 		int 	  GetInitialStateRel() const					{ return initialstateRel;		}	/*!< Return initial state index */
 		int	    GetFinalStateRel()	const					{ return finalstateRel;		}	/*!< Return final state index */
-    void    SetFixed(bool fx) { fixed = fx; }
-    bool    GetFixed() const { return fixed; };
   bool GetArcTan() const { return arctan; };
   void	  Print(std::ostream &out) const;		/*!< Print matrix element information */
   void Kick(TRandom3 &rand);
@@ -225,9 +225,9 @@ public:
   LifetimeMixingElement() {}
   LifetimeMixingElement(std::string name, int init, int fina, int l1, int l2,
                         double wth, double wth_ll, double wth_ul,
-                        double mix, double mix_ll, double mix_ul,
-                        bool fx = false) :
-    FittingElement("LtMixE", name, fx, 2)
+                        double mix, double mix_ll, double mix_ul
+                        ) :
+    FittingElement("LtMixE", name, 2)
   {
     initialState = init;
     finalState = fina;
@@ -239,7 +239,6 @@ public:
     mixingRatio = mix;
     mixingRatio_ll = mix_ll;
     mixingRatio_ul = mix_ul;
-    fixed = false;          
   }
   ~LifetimeMixingElement() {}
 
@@ -300,9 +299,9 @@ public:
   RelLtMixElement(std::string name, int init, int fina, int l1, int l2,
                         double rel_wth, double rel_wth_ll, double rel_wth_ul,
                         double mix, double mix_ll, double mix_ul,
-                  int ref_init, int ref_fina,                  
-                  bool fx = false) :
-    FittingElement("RelLtMx", name, fx, 2) {
+                  int ref_init, int ref_fina                  
+                  ) :
+    FittingElement("RelLtMx", name, 2) {
     initialState = init;
     initialState = init;
     finalState = fina;
@@ -316,7 +315,6 @@ public:
     mixingRatio_ul = mix_ul;
     initRef = ref_init;
     finalRef = ref_fina;
-    fixed = fx;
   }
 
   void	  Print(std::ostream &out) const;		/*!< Print matrix element information */
@@ -379,7 +377,7 @@ public:
                      double relmat, double relmat_ll, double relmat_ul,
                      int init_ref, int final_ref,
                      bool fx=false) :
-    FittingElement("RelMatW", name, fx, 1) {
+    FittingElement("RelMatW", name, 1) {
     lambda = l;
     initialState = init;
     finalState = fina;
@@ -388,6 +386,7 @@ public:
     matRel_ul = relmat_ul;
     initRef = init_ref;
     finalRef = final_ref;        
+    fixed[0] = fx;
   }
 
   void	  Print(std::ostream &out) const;		/*!< Print matrix element information */
