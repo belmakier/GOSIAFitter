@@ -147,12 +147,12 @@ class GOSIASimFitter {
   void  AddTargetRelativeMatrixElement(std::string,int,int,int,int,int,int,double,double,double,bool=false,bool=false,bool=false);		/*!< Add a fitting matrix element for the beam */
   void AddBeamLifetimeMixingElement(std::string name, int init, int fin, int l1, int l2, 
                                                        double wth, double wth_ll, double wth_ul,
-                                         double mix, double mix_ll, double mix_ul,bool fix=false);
+                                         double mix, double mix_ll, double mix_ul);
   void AddBeamRelLtMixElement(std::string name, int init, int fin, int l1, int l2, 
                                             double rel_wth, double rel_wth_ll, double rel_wth_ul,
                                             double mix, double mix_ll, double mix_ul,
-                                            int init_ref, int final_ref,
-                                              bool fix=false);
+                                            int init_ref, int final_ref
+                                             );
   void AddBeamRelMatWidthElement(std::string name, int l, int init, int fina,
                                                double relmat, double relmat_ll, double relmat_ul,
                                                int init_ref, int final_ref,
@@ -271,13 +271,13 @@ class GOSIASimFitter {
   FittingElement* GetBeamFittingElement(std::string name);
   FittingElement* GetTargetFittingElement(std::string name);
   
-  void FixBeamFittingElement(std::string);
-  void UnFixBeamFittingElement(std::string);
+  void FixBeamFittingElement(std::string, int);
+  void UnFixBeamFittingElement(std::string, int);
   void FixBeamFittingElements(std::vector<std::string>);
   void UnFixBeamFittingElements(std::vector<std::string>);
 
-  void FixTargetFittingElement(std::string);
-  void UnFixTargetFittingElement(std::string);
+  void FixTargetFittingElement(std::string, int);
+  void UnFixTargetFittingElement(std::string, int);
   void FixTargetFittingElements(std::vector<std::string>);
   void UnFixTargetFittingElements(std::vector<std::string>);
 
@@ -323,6 +323,8 @@ class GOSIASimFitter {
   
   void WriteTargetFittingParameters(std::string outfile);
   void WriteTargetFittingParameters(std::ostream &outstream);
+
+  void WriteBeamJSON(std::ostream &out, double sum=1, double time=1);
 
   void ReadBeamFittingParameters(std::string filename);
   void ReadTargetFittingParameters(std::string filename);
