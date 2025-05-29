@@ -4075,8 +4075,8 @@ C     Troubleshooting
          ENDIF
       ENDIF
 C     End of execution
-      if (verbose .ge. 1) then
- 2000    WRITE (22,99047)
+ 2000 if (verbose .ge. 1) then
+         WRITE (22,99047)
       end if
 99047 FORMAT (15X,'********* END OF EXECUTION **********')
       GOTO 2001
