@@ -78,6 +78,8 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
                         integralAlways = 0;
                         doBeamCalc = true;
                         doTargCalc = true;
+                        beam_yields.nexp=0;
+                        target_yields.nexp=0;
 
 											}	/*!< Construct object with vector of experimental data to be fit */
 		virtual ~GOSIASimMinFCN()						{;					}
@@ -360,6 +362,7 @@ class GOSIASimMinFCN { // : public ROOT::Minuit2::FCNBase{
 
   out_yields beam_yields;
   out_yields target_yields;
+
   double bst_me[999];
 
   GOSIASimAnMinimizer *simanmin;

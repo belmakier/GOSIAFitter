@@ -54,7 +54,7 @@ struct out_exp {
 };
 
 struct out_yields {
-  int nexp;
+  int nexp = 0;
   out_exp experiment[50];
 };
 

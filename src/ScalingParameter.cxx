@@ -79,7 +79,21 @@ void ScalingParameter::Fit(const std::vector<ExperimentData> &exptData_Beam, con
       ROOT::Math::Factory::CreateMinimizer("Minuit2","Migrad");
     ROOT::Math::Functor f_init(theFCN,1);
     min->SetFunction(f_init);
-    min->SetVariable(0,"Scaling",1,0.000001);
+    int expt_number = GetExperimentNumbers().at(0);
+    double guess = 10.0;
+    //sensible guess for the scaling parameter: ratio of first yield (usually 2->0)
+    if (exptData_Beam.size() >= exptData_Target.size()) {
+      int indx_i = exptData_Beam.at(expt_number).GetData().at(0).GetInitialIndex();
+      int indx_f = exptData_Beam.at(expt_number).GetData().at(0).GetFinalIndex();
+      guess = exptData_Beam.at(expt_number).GetData().at(0).GetCounts()/EffectiveCrossSection_Beam.at(expt_number)[indx_f][indx_i];
+    }
+    else {
+      int indx_i = exptData_Target.at(expt_number).GetData().at(0).GetInitialIndex();
+      int indx_f = exptData_Target.at(expt_number).GetData().at(0).GetFinalIndex();
+      guess = exptData_Target.at(expt_number).GetData().at(0).GetCounts()/EffectiveCrossSection_Target.at(expt_number)[indx_f][indx_i];
+    }
+        
+    min->SetVariable(0,"Scaling",guess,0.000001);
     min->SetTolerance(0.001);
     min->Minimize();
 
